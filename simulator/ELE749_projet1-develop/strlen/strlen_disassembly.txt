@@ -1,0 +1,25 @@
+# disassembly of strlen.riscv
+# pseudoinstructions have been replaced with real instructions only.
+
+00000000 <main>:
+	0:		00400597		auipc x11 0x0400
+	4:		00058593		addi x11 x11 0
+	8:		00c000ef		jal x1 0x14 <strlen>
+	c:		00050093		addi x1 x10 0
+	10:		0200006f		jal x0 0x30 <program_end>
+
+00000014 <strlen>:
+	14:		00000513		addi x10 x0 0
+
+00000018 <strlen_while>:
+	18:		00058283		lb x5 0(x11)
+	1c:		00028863		beq x5 x0 16 <strlen_out>
+	20:		00150513		addi x10 x10 1
+	24:		00158593		addi x11 x11 1
+	28:		fe0008e3		beq x0 x0 -16 <strlen_while>
+
+0000002c <strlen_out>:
+	2c:		00008067		jalr x0 x1 0
+
+00000030 <program_end>:
+	30:		00000073		ecall

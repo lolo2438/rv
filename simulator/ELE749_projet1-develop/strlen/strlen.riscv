@@ -1,0 +1,30 @@
+# strlen function demo for RV32E
+# written as an assembly programmer would, with pseudoinstructions for clarity
+
+.data
+str: .string "Ecole de technologie superieure\0"
+
+.text
+main:
+	la x11, str				# const char* str = "Ecole de technologie superieure";
+	jal  strlen				# return strlen(str);
+	addi x1, x10, 0
+	j program_end	
+	
+strlen:						# size_t strlen(const char* cs)
+							# {
+	addi x10, x0, 0 		# 	size_t i = 0
+
+strlen_while:				#   while(cs[i] != '\0');
+	lb x5, 0(x11) 
+	beqz x5, strlen_out
+	addi x10, x10, 1 		#   ++i;
+	addi x11, x11, 1
+	beqz x0,strlen_while
+
+strlen_out:
+	ret 					#   return i
+
+program_end:
+	ecall
+	

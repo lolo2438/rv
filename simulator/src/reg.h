@@ -6,10 +6,10 @@
 int reg_create(int size);
 void reg_destroy(void);
 
-int reg_read_data(uint8_t addr, uint32_t *data);
-int reg_write_data(uint8_t addr, uint32_t data);
+int reg_read_data(uint8_t addr, int32_t *data);
+int reg_write_data(uint8_t addr, int32_t data);
 
-int reg_read_dest(uint8_t addr, uint8_t *dest);
-int reg_write_dest(uint8_t addr, uint8_t dest);
+int reg_read_src(uint8_t addr, uint8_t *src);
+int reg_write_src(uint8_t addr, uint8_t src);
 
 #endif

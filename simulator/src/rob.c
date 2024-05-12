@@ -12,7 +12,6 @@ struct rob_data {
         uint8_t dest; // Address to write the data in the regfile (RD)
         int32_t data; // Data to write in the register
         bool done;    // If the data is ready
-        bool re;
 };
 
 
@@ -53,25 +52,26 @@ void rob_destroy(void) {
 
 
 // Allocates a space in the rob & returns the address of the rob entry
-int rob_issue(uint8_t dest) {
+int rob_issue(uint8_t dest, uint8_t *src) {
 
         int issue_ptr;
 
-        if (rob.cnt == rob.size)
+        if (rob.cnt == rob.size || !src)
                 return 0;
 
         // Issue in rob
         issue_ptr = rob.issue_ptr;
         rob.data[issue_ptr].dest = dest;
         rob.data[issue_ptr].done = 0;
-        rob.data[issue_ptr].re = 0;
 
         // Update rob issue ptr
         rob.issue_ptr = (rob.issue_ptr + 1) % rob.size;
         rob.cnt += 1;
 
         // Return the address to write to
-        return issue_ptr;
+        *src = issue_ptr;
+
+        return 1;
 }
 
 
@@ -89,14 +89,24 @@ int rob_write(uint8_t addr, int32_t data) {
 }
 
 
+int rob_read(uint8_t addr, int32_t *data) {
+        if (addr > rob.size)
+                return 0;
+
+        *data = rob.data[addr].data;
+
+        return rob.data[addr].done;
+}
+
+
 // Commits a value if it is ready
 int rob_commit(uint8_t *dest, int32_t *data) {
 
         if (rob.cnt == 0)
                 return 0;
 
-        if (rob.data[rob.commit_ptr].done && rob.data[rob.commit_ptr].re) {
-                *data = rob.data[rob.commit_ptr].dest;
+        if (rob.data[rob.commit_ptr].done) {
+                *data = rob.data[rob.commit_ptr].data;
                 *dest = rob.data[rob.commit_ptr].dest;
 
                 rob.commit_ptr = (rob.commit_ptr + 1) % rob.size;
@@ -107,28 +117,6 @@ int rob_commit(uint8_t *dest, int32_t *data) {
         }
 
         return 0;
-}
-
-
-// Simulates a FF using a re flag, return number of value that
-// were propagated if there we wrote to the rob
-int rob_propagate(void) {
-        int n;
-
-        if (!rob.w)
-                return 0;
-
-        // Update read enable flags
-        for (int i = 0; i < rob.size; i++) {
-                if(rob.data[i].done && !rob.data[i].re) {
-                        rob.data[i].re = 1;
-                        n++;
-                }
-        }
-
-        rob.w = 0;
-
-        return n;
 }
 
 

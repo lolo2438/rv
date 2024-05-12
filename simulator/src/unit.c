@@ -2,22 +2,9 @@
 
 #define F3_MAX 8
 
-// M Operations
-
-
-static int nb_units;
-
-static struct unit {
-        struct result_bus res;
-        int nb_cycle_left;
-        int busy;
-} * units;
-
-
-// ** LOCAL FUNCTION **
-static int32_t execute_operation(int16_t f10, int32_t a, int32_t b) {
+int32_t alu_exec(int16_t f10, int32_t a, int32_t b) {
         switch(f10) {
-                // I
+                //I
                 case F10_ADD    : return a + b;
                 case F10_SLL    : return a << b;
                 case F10_SLT    : return a < b;
@@ -43,7 +30,7 @@ static int32_t execute_operation(int16_t f10, int32_t a, int32_t b) {
         }
 }
 
-static int get_nb_exec_cycle(int16_t f10) {
+int alu_get_cycle(int16_t f10) {
         switch(f10) {
                 // I
                 case F10_ADD  :
@@ -69,70 +56,11 @@ static int get_nb_exec_cycle(int16_t f10) {
                 case F10_DIVU   :
                 case F10_REM    :
                 case F10_REMU   :
-                        return DIV_LATENCY;
+                        return 19;
 
                 default :
                         return 0;
         }
 
-}
-
-
-static int unit_check_done(int unit) {
-        if (units[unit].busy && units[unit].nb_cycle_left == 0)
-                return 1;
-
-        units[unit].nb_cycle_left -= 1;
-
-        return 0;
-}
-
-
-// ** GLOBAL FUNCTIONS **
-int create_exec_units(int nb) {
-
-}
-
-int get_free_unit(void) {
-
-        for(int i = 0; i < nb_units; i++) {
-                if(!units[i].busy) {
-                        return i;
-                }
-        }
-
-        return -1;
-}
-
-int unit_execute(struct data_bus *data, int unit_nb) {
-        struct unit *unit = &units[unit_nb];
-
-        int32_t res;
-        int32_t a = data->vj;
-        int32_t b = data->vk;
-
-        uint16_t f10 = (data->f7 << 3 | data->f3);
-
-        // TODO: Check here if operation is supported by the unit
-
-        unit->res.result = execute_operation(f10, a, b);
-        unit->nb_cycle_left = get_nb_exec_cycle(f10);
-        unit->res.dest = data->dest;
-        unit->busy = 1;
-
-        return 0;
-}
-
-
-int unit_get_result(int unit, struct result_bus *results) {
-
-        if (unit_check_done(unit)) {
-               *results = units[unit].res;
-               units[unit].busy = 0;
-
-               return 1;
-        }
-
-        return 0;
 }
 

@@ -3,6 +3,9 @@
  *
  */
 
+#include "common.h"
+#include <stdio.h>
+
 int main(int argc, char *argv[]) {
 
         // INIT CPU
@@ -22,4 +25,15 @@ int main(int argc, char *argv[]) {
         // 4. Execution units
         // 5. ROB
         // 6. LSU & BRU
+
+
+        // Initialisation procedure
+        // Verify if valid program
+        // Initialise Mem, front end, backend
+
+        // Run
+
+        // Filetypes: text, ELF
 }
+
+

@@ -43,19 +43,8 @@ enum INT_EXTENSION {
 
 };
 
+int32_t alu_exec(int16_t f10, int32_t a, int32_t b);
 
-
-struct data_bus {
-        uint8_t f3, f7;
-        int32_t vj, vk;
-        uint8_t dest;
-
-};
-
-struct result_bus {
-        uint8_t dest;
-        int32_t result;
-};
-
+int alu_get_cycle(int16_t f10);
 
 #endif

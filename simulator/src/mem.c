@@ -6,7 +6,7 @@ int mem_init(int size) {
       mem = malloc(size);
 
       if(!mem)
-              return EALLOC;
+              return ENOMEM;
 
       return 0;
 }

@@ -1,0 +1,11 @@
+Create configuration format:
+    Specify XLEN: { 32, 64, 128 }
+        for RV32I, RV64I or RV128I
+
+    Specify FLEN: { 32, 64, 126 }
+        for F, D or Q extension, if FLT_EXT = true
+
+    Select extensions with boolean:
+    Ex: M_EXT : boolean := true;
+
+    Do some sanitycheck in the body to verify that everything is fine

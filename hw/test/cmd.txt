@@ -1,0 +1,1 @@
+python run.py --gtkwave-fmt vcd -g -v dsp.dsp_tb.strlen

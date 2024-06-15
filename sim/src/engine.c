@@ -2,10 +2,9 @@
  *
  */
 #include "engine.h"
-#include "reg.h"
-#include "rob.h"
 
 static uint32_t PC = 0;
+static uint32_t instruction;
 
 // ---
 // LOCAL STRUCT
@@ -56,17 +55,7 @@ static struct exb {
         int nb_rdy;
 } exb = {0};
 
-
-static struct lsu {
-
-        int size;
-        int nb;
-        uint32_t *rd_addr; // List of addresses to be fetched
-        uint32_t *wr_addr; // List of addresses to write
-        uint32_t *wr_data;
-} lsu = {0};
-
-
+// ------------------ BRU
 static struct {
         int a;
 } bru;
@@ -194,8 +183,6 @@ static int dispatch() {
 
         // TODO: Make a global instruction bus
         //       Make a dispatcher that masks the instruction lanes according to the thingy
-        uint32_t instruction;
-        mem_read(PC, &instruction, sizeof(instruction));
 
         // TODO: Check if instruction is valid
         if (instruction == 0)
@@ -558,6 +545,8 @@ CLEANUP:
 
 
 int engine_run(void) {
+
+        mem_read(PC, &instruction, sizeof(instruction));
 
         // Backend
         commit();

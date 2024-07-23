@@ -1,0 +1,18 @@
+standard = "2008"
+
+[libraries]
+riscv.files = [
+    'hw/pkg/riscv/*.vhd',
+]
+
+tb.files = [
+    'hw/pkg/tb_pkg.vhd',
+    'hw/test/*.vhd'
+
+]
+
+rtl.files = [
+    'hw/pkg/common_pkg.vhd',
+    'hw/rtl/common/*.vhd',
+    'hw/rtl/*.vhd'
+]

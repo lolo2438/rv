@@ -24,7 +24,7 @@ end entity;
 
 architecture rtl of stack is
 
-  signal stack_mem : std_logic_array(0 to STACK_SIZE-1)(DATA_WIDTH-1 downto 0);
+  signal stack_mem : std_logic_matrix(0 to STACK_SIZE-1)(DATA_WIDTH-1 downto 0);
   signal stack_addr : unsigned(natural(ceil(log2(real(STACK_SIZE))))-1 downto 0);
 --  signal next_stack_addr : unsigned(stack_addr'range);
 

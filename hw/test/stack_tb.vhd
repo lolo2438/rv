@@ -5,6 +5,8 @@ use ieee.numeric_std.all;
 library vunit_lib;
 context vunit_lib.vunit_context;
 
+library rtl;
+
 use work.tb_pkg.all;
 
 library osvvm;
@@ -128,7 +130,7 @@ begin
 
   test_runner_watchdog(runner, 10 us);
 
-  DUT: entity work.stack(rtl)
+  DUT: entity rtl.stack(rtl)
   generic map(
     DATA_WIDTH => DATA_WIDTH,
     STACK_SIZE => STACK_SIZE

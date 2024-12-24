@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
 
-entity rob is
+entity rob1 is
   generic (
     REG_LEN : natural;
     ROB_LEN : natural;
@@ -43,7 +43,7 @@ entity rob is
   );
 end entity;
 
-architecture rtl of rob is
+architecture rtl1 of rob1 is
 
   -- Types
 

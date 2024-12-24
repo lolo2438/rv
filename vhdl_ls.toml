@@ -6,13 +6,33 @@ riscv.files = [
 ]
 
 tb.files = [
-    'hw/pkg/tb_pkg.vhd',
+    'hw/pkg/tb/*.vhd',
     'hw/test/*.vhd'
 
 ]
 
 rtl.files = [
-    'hw/pkg/common_pkg.vhd',
+    'hw/pkg/common/*.vhd',
     'hw/rtl/common/*.vhd',
     'hw/rtl/*.vhd'
+]
+
+vunit_lib.files = [
+    '/usr/lib/python3.12/site-packages/vunit/vhdl/core/src/*.vhd',
+    '/usr/lib/python3.12/site-packages/vunit/vhdl/com/src/*.vhd',
+    '/usr/lib/python3.12/site-packages/vunit/vhdl/array/src/*.vhd',
+    '/usr/lib/python3.12/site-packages/vunit/vhdl/dictionary/src/*.vhd',
+    '/usr/lib/python3.12/site-packages/vunit/vhdl/logging/src/*.vhd',
+    '/usr/lib/python3.12/site-packages/vunit/vhdl/path/src/*.vhd',
+    '/usr/lib/python3.12/site-packages/vunit/vhdl/random/src/*.vhd',
+    '/usr/lib/python3.12/site-packages/vunit/vhdl/string_ops/src/*.vhd',
+    '/usr/lib/python3.12/site-packages/vunit/vhdl/check/src/*.vhd',
+    '/usr/lib/python3.12/site-packages/vunit/vhdl/data_types/src/*.vhd',
+    '/usr/lib/python3.12/site-packages/vunit/vhdl/run/src/*.vhd',
+    '/usr/lib/python3.12/site-packages/vunit/vhdl/verification_components/src/*.vhd',
+    '/usr/lib/python3.12/site-packages/vunit/vhdl/*.vhd'
+]
+
+osvvm.files = [
+    '/usr/lib/python3.12/site-packages/vunit/vhdl/osvvm/*.vhd'
 ]

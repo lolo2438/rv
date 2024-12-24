@@ -40,7 +40,7 @@ architecture rtl of cache is
   type cache_row_t is record
     valid : std_logic;
     tag   : std_logic_vector(TAG_WIDTH-1 downto 0);
-    data  : std_logic_array(0 to 2**OFFSET_SIZE-1)(XLEN-1 downto 0);
+    data  : std_logic_matrix(0 to 2**OFFSET_SIZE-1)(XLEN-1 downto 0);
   end record;
 
   type cache_col_t is array (0 to 2**SET_SIZE-1) of cache_row_t;

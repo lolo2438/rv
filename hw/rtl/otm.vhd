@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 library rtl;
 use rtl.common_pkg.all;
 
-entity rv_otm is
+entity otm is
   generic( RST_LEVEL: std_logic := '0';
            ADDR_LEN : natural);
   port(
@@ -24,7 +24,7 @@ entity rv_otm is
 end entity;
 
 
-architecture rtl of rv_otm is
+architecture rtl of otm is
 
     constant MATRIX_SIZE : natural := 2**ADDR_LEN;
 

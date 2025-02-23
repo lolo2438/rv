@@ -1,0 +1,97 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/26.0.9 Chrome/128.0.6613.186 Electron/32.3.0 Safari/537.36" version="26.0.9">
+  <diagram name="Page-1" id="hICVb3PXgQp4XZ-NFqc1">
+    <mxGraphModel dx="1185" dy="685" grid="1" gridSize="1" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="jMOs-5i1UsgwiKJzX70d-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="jMOs-5i1UsgwiKJzX70d-1" target="jMOs-5i1UsgwiKJzX70d-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jMOs-5i1UsgwiKJzX70d-1" value="INVALID_CHECK" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="212" y="176" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jMOs-5i1UsgwiKJzX70d-14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="jMOs-5i1UsgwiKJzX70d-3" target="jMOs-5i1UsgwiKJzX70d-10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jMOs-5i1UsgwiKJzX70d-3" value="UNIT_UDEC" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="385" y="177" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jMOs-5i1UsgwiKJzX70d-5" value="o_illegal" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="242" y="280" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="jMOs-5i1UsgwiKJzX70d-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="jMOs-5i1UsgwiKJzX70d-7" target="jMOs-5i1UsgwiKJzX70d-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jMOs-5i1UsgwiKJzX70d-7" value="HINT_CHECK" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="52" y="174" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jMOs-5i1UsgwiKJzX70d-8" value="o_hint" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="82" y="276" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="jMOs-5i1UsgwiKJzX70d-10" value="o_unit_f3&lt;div&gt;o_unit_f7&lt;/div&gt;&lt;div&gt;o_unit_sel&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="415" y="270" width="60" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="jMOs-5i1UsgwiKJzX70d-30" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="jMOs-5i1UsgwiKJzX70d-15" target="jMOs-5i1UsgwiKJzX70d-29">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jMOs-5i1UsgwiKJzX70d-15" value="REG_DEC" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="551" y="177" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jMOs-5i1UsgwiKJzX70d-16" value="Checks the instruction is a HINT" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="46" y="327" width="119" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="jMOs-5i1UsgwiKJzX70d-18" value="Checks if the instruction is illegal" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="212" y="329" width="119" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="jMOs-5i1UsgwiKJzX70d-26" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="jMOs-5i1UsgwiKJzX70d-19" target="jMOs-5i1UsgwiKJzX70d-23">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jMOs-5i1UsgwiKJzX70d-19" value="instruction" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="411" y="76" width="60" height="14" as="geometry" />
+        </mxCell>
+        <mxCell id="jMOs-5i1UsgwiKJzX70d-21" value="" style="endArrow=none;dashed=1;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="57" y="256" as="sourcePoint" />
+            <mxPoint x="841" y="256" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jMOs-5i1UsgwiKJzX70d-24" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="jMOs-5i1UsgwiKJzX70d-23" target="jMOs-5i1UsgwiKJzX70d-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jMOs-5i1UsgwiKJzX70d-25" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.314;exitY=1.168;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitPerimeter=0;" edge="1" parent="1" source="jMOs-5i1UsgwiKJzX70d-23" target="jMOs-5i1UsgwiKJzX70d-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jMOs-5i1UsgwiKJzX70d-39" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="jMOs-5i1UsgwiKJzX70d-23" target="jMOs-5i1UsgwiKJzX70d-33">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jMOs-5i1UsgwiKJzX70d-23" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="112" y="122" width="661" height="8" as="geometry" />
+        </mxCell>
+        <mxCell id="jMOs-5i1UsgwiKJzX70d-29" value="o_rs1&lt;div&gt;o_rs2&lt;/div&gt;&lt;div&gt;o_rd&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="581" y="269" width="60" height="49" as="geometry" />
+        </mxCell>
+        <mxCell id="jMOs-5i1UsgwiKJzX70d-31" value="&lt;div style=&quot;&quot;&gt;Register interface&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="557" y="323" width="111" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="jMOs-5i1UsgwiKJzX70d-32" value="&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Micro decoder for the different units&lt;/span&gt;&lt;/div&gt;&lt;div&gt;SYS:&lt;/div&gt;&lt;div&gt;o_sys_f12&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;o_sys_sel&lt;/span&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;LSU:&lt;/div&gt;&lt;div&gt;No F7&lt;/div&gt;&lt;div&gt;F3 = operation type&lt;/div&gt;&lt;div&gt;sel_lsu_load&lt;/div&gt;&lt;div&gt;sel_lsu_store&lt;/div&gt;&lt;div&gt;sel_lsu_fence&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;BRU:&lt;/div&gt;&lt;div&gt;No F7&lt;/div&gt;&lt;div&gt;F3 = branch type&lt;/div&gt;&lt;div&gt;sel_bru_branch&lt;/div&gt;&lt;div&gt;sel_bru_jalr&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;EXB/EXU:&lt;/div&gt;&lt;div&gt;Format L/S for add&lt;/div&gt;&lt;div&gt;Format JAL for add&lt;/div&gt;&lt;div&gt;Format BR for slt&lt;/div&gt;&lt;div&gt;Format JALR for add&lt;/div&gt;&lt;div&gt;f3 + f7 + sel_exu&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;REG:&lt;/div&gt;&lt;div&gt;write back to the registers&lt;/div&gt;&lt;div&gt;sel_reg&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="372" y="326" width="144" height="446" as="geometry" />
+        </mxCell>
+        <mxCell id="jMOs-5i1UsgwiKJzX70d-36" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="jMOs-5i1UsgwiKJzX70d-33" target="jMOs-5i1UsgwiKJzX70d-35">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jMOs-5i1UsgwiKJzX70d-33" value="IMM_DEC" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="713" y="176" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jMOs-5i1UsgwiKJzX70d-35" value="o_imm" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="743" y="267" width="60" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="jMOs-5i1UsgwiKJzX70d-37" value="&lt;div style=&quot;&quot;&gt;Immediate decoder&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="736.5" y="300" width="73" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="jMOs-5i1UsgwiKJzX70d-38" value="Clock" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="850" y="243" width="60" height="29" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -11,11 +11,11 @@ use rtl.common_pkg.all;
 library tb;
 use tb.tb_pkg.clk_gen;
 
-entity rv_otm_tb is
+entity otm_tb is
   generic (runner_cfg : string);
 end entity;
 
-architecture tb of rv_otm_tb is
+architecture tb of otm_tb is
 
     constant ADDR_LEN  : natural := 2;
     constant RST_LEVEL : std_logic := '0';
@@ -114,7 +114,7 @@ begin
   end process;
 
 
-  DUT: entity rtl.rv_otm(rtl)
+  DUT: entity rtl.otm(rtl)
   generic map( RST_LEVEL => RST_LEVEL,
                ADDR_LEN => ADDR_LEN
   )

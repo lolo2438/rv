@@ -2,10 +2,10 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library rtl;
-use rtl.common_pkg.all;
+library vex;
+use vex.common_pkg.all;
 
-entity rv_exb is
+entity exb is
   generic(
     RST_LEVEL : std_logic := '0'; -- Reset level
     EXB_LEN   : natural;          -- Length of the address of the exb, the size of the EXP = 2**EXB_LEN
@@ -51,7 +51,7 @@ entity rv_exb is
   );
 end entity;
 
-architecture rtl of rv_exb is
+architecture rtl of exb is
 
   constant EXB_SIZE : natural := 2**EXB_LEN;
 
@@ -90,7 +90,7 @@ architecture rtl of rv_exb is
 
 begin
 
-  u_otm : entity work.rv_otm(rtl)
+  u_otm : entity work.otm(rtl)
   generic map(
     RST_LEVEL => RST_LEVEL,
     ADDR_LEN => EXB_LEN

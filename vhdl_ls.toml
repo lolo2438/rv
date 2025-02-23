@@ -11,9 +11,10 @@ tb.files = [
 
 ]
 
-rtl.files = [
+vex.files = [
     'hw/pkg/common/*.vhd',
     'hw/rtl/common/*.vhd',
+    'hw/rtl/lsu/*.vhd',
     'hw/rtl/*.vhd'
 ]
 

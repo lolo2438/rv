@@ -16,7 +16,7 @@ use ieee.numeric_std.all;
 library riscv;
 use riscv.RV32I.all;
 
-entity rv_dec is
+entity dec is
   generic(
     -- TODO: Supported EXTENSIONS
     XLEN : natural
@@ -43,7 +43,7 @@ entity rv_dec is
   );
 end entity;
 
-architecture rtl of rv_dec is
+architecture rtl of dec is
 
   -- Instruction
   signal i   : std_logic_vector(i_inst'range);

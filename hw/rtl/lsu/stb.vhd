@@ -2,8 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library rtl;
-use rtl.common_pkg.all;
+library veyth;
+use veyth.common_pkg.all;
 
 entity stb is
   generic (
@@ -15,44 +15,46 @@ entity stb is
   );
   port (
     -- Control I/F
-    i_clk   : in  std_logic;
-    i_arst  : in  std_logic;
-    i_srst  : in  std_logic;
-    o_full  : out std_logic;
+    i_clk           : in  std_logic;                                --! System clock
+    i_arst          : in  std_logic;                                --! Asynchronous reset
+    i_srst          : in  std_logic;                                --! Synchronous reset
+    o_full          : out std_logic;                                --! STB is full
 
     -- Dispatch I/F
-    i_disp_valid  : in  std_logic;                                --! Dispatch data is valid
-    i_disp_store  : in  std_logic;                                --! Store instruction
-    i_disp_f3     : in  std_logic_vector(2 downto 0);             --! L/S F3
+    i_disp_valid    : in  std_logic;                                --! Dispatch data is valid
+    i_disp_store    : in  std_logic;                                --! Store instruction
+    i_disp_f3       : in  std_logic_vector(2 downto 0);             --! L/S F3
 
-    i_disp_va     : in  std_logic_vector(XLEN-1 downto 0);        --! Address field value for Load/Store
-    i_disp_ta     : in  std_logic_vector(TAG_LEN-1 downto 0);     --! Address tag to look for if it's not ready
-    i_disp_ra     : in  std_logic;                                --! Address ready flag
+    i_disp_va       : in  std_logic_vector(XLEN-1 downto 0);        --! Address field value for Load/Store
+    i_disp_ta       : in  std_logic_vector(TAG_LEN-1 downto 0);     --! Address tag to look for if it's not ready
+    i_disp_ra       : in  std_logic;                                --! Address ready flag
 
-    i_disp_vd     : in  std_logic_vector(XLEN-1 downto 0);        --! Data field value for Store
-    i_disp_td     : in  std_logic_vector(TAG_LEN-1 downto 0);     --! Data tag to look for if it's not ready
-    i_disp_rd     : in  std_logic;                                --! Data ready flag
+    i_disp_vd       : in  std_logic_vector(XLEN-1 downto 0);        --! Data field value for Store
+    i_disp_td       : in  std_logic_vector(TAG_LEN-1 downto 0);     --! Data tag to look for if it's not ready
+    i_disp_rd       : in  std_logic;                                --! Data ready flag
+
+    o_disp_qr       : out std_logic_vector(STB_LEN-1 downto 0);     --! STB address to write back data
 
     -- GRP I/F
     i_wr_grp        : in  std_logic_vector(GRP_LEN-1 downto 0);     --! Group to attribute to the stores
     i_rd_grp        : in  std_logic_vector(GRP_LEN-1 downto 0);     --! Group to attribute to the stores
     o_rd_grp_match  : out std_logic;                                --! The input group specified is active in the LDB
 
-    -- CDB I/F
-    i_cdb_vq      : in  std_logic_vector(XLEN-1 downto 0);        --! Data from the CDB bus
-    i_cdb_tq      : in  std_logic_vector(TAG_LEN-1 downto 0);     --! Tag from the CDB bus
-    i_cdb_rq      : in  std_logic;                                --! CDB Ready flag
+    -- CDB RD I/F
+    i_cdbr_vq       : in  std_logic_vector(XLEN-1 downto 0);        --! Data from the CDB bus
+    i_cdbr_tq       : in  std_logic_vector(TAG_LEN-1 downto 0);     --! Tag from the CDB bus
+    i_cdbr_rq       : in  std_logic;                                --! CDB Ready flag
 
     -- LDB I/F
-    o_stb_dep     : out std_logic_vector(2**STB_LEN-1 downto 0);  --! Dependency flags for Loads
-    o_stb_addr    : out std_logic_vector(STB_LEN-1 downto 0);     --! Address of the dispatched store to clear the dependency flag
+    o_stb_dep       : out std_logic_vector(2**STB_LEN-1 downto 0);  --! Dependency flags for Loads
+    o_stb_addr      : out std_logic_vector(STB_LEN-1 downto 0);     --! Address of the dispatched store to clear the dependency flag
 
     -- Issue I/F
-    i_issue_rdy   : in  std_logic;                                --! Memory unit is ready for a store
-    o_issue_valid : out std_logic;                                --! The store is valid
-    o_issue_f3    : out std_logic_vector(2 downto 0);             --! F3 of the store
-    o_issue_addr  : out std_logic_vector(XLEN-1 downto 0);        --! Address of the store op
-    o_issue_data  : out std_logic_vector(XLEN-1 downto 0)         --! Data of the store op
+    i_issue_rdy     : in  std_logic;                                --! Memory unit is ready for a store
+    o_issue_valid   : out std_logic;                                --! The store is valid
+    o_issue_f3      : out std_logic_vector(2 downto 0);             --! F3 of the store
+    o_issue_addr    : out std_logic_vector(XLEN-1 downto 0);        --! Address of the store op
+    o_issue_data    : out std_logic_vector(XLEN-1 downto 0)         --! Data of the store op
   );
 end entity;
 
@@ -147,16 +149,16 @@ begin
         end if;
 
       -- CDB WRITEBACK
-        if i_cdb_rq = '1' then
+        if i_cdbr_rq = '1' then
           for i in 0 to STB_SIZE-1 loop
             if stb(i).busy = '1' and stb(i).commited = '0' then
-              if stb(i).addr_rdy = '0' and stb(i).addr_src = i_cdb_tq then
-                stb(i).addr <= i_cdb_vq;
+              if stb(i).addr_rdy = '0' and stb(i).addr_src = i_cdbr_tq then
+                stb(i).addr <= i_cdbr_vq;
                 stb(i).addr_rdy <= '1';
               end if;
 
-              if stb(i).data_rdy = '0' and stb(i).data_src = i_cdb_tq then
-                stb(i).data <= i_cdb_vq;
+              if stb(i).data_rdy = '0' and stb(i).data_src = i_cdbr_tq then
+                stb(i).data <= i_cdbr_vq;
                 stb(i).data_rdy <= '1';
               end if;
             end if;
@@ -190,6 +192,8 @@ begin
   ---
   -- OUTPUT
   ---
+  o_disp_qr <= std_logic_vector(to_unsigned(wr_ptr, o_disp_qr'length));
+
   o_full <= full;
   o_rd_grp_match <= grp_match;
   o_stb_dep <= bit_reverse(stb_deps);

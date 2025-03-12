@@ -7,17 +7,20 @@ use riscv.RV32I.all;
 
 entity alu is
   generic(
-    XLEN  : natural
+    TAG_LEN : natural;
+    XLEN    : natural
   );
   port(
     i_clk   : in  std_logic;
     i_valid : in  std_logic;
+    i_tq    : in  std_logic_vector(TAG_LEN-1 downto 0);
     i_a     : in  std_logic_vector(XLEN-1 downto 0);
     i_b     : in  std_logic_vector(XLEN-1 downto 0);
     i_f3    : in  std_logic_vector(2 downto 0);
     i_f7    : in  std_logic_vector(6 downto 0);
     o_c     : out std_logic_vector(XLEN-1 downto 0);
-    o_done  : out std_logic;
+    o_tq    : out std_logic_vector(TAG_LEN-1 downto 0);
+    o_done  : out std_logic
   );
 end entity;
 
@@ -46,6 +49,7 @@ begin
   sr   <= std_logic_vector(shift_right(signed(i_a), to_integer(unsigned(i_b)))) when csra = '1' else
           std_logic_vector(shift_right(unsigned(i_a), to_integer(unsigned(i_b))));
 
+
   -- TODO: If OP32(RV64) or OP64(RV128)
   -- Sign extend from bit 32 (RV64) or bit 64(RV128)
   add <= std_logic_vector(c_add(XLEN-1 downto 0));
@@ -62,12 +66,13 @@ begin
          a and b    when FUNCT3_AND,
          (others => '0') when others; -- Impossible
 
+
   ---
   -- OUTPUT
   ---
-  o_c <= c when rising_edge(i_clk);
-
-  o_done <= i_valid when rising_edge(i_clk);
+  o_c     <= c when rising_edge(i_clk);
+  o_tq    <= i_tq when rising_edge(i_clk);
+  o_done  <= i_valid when rising_edge(i_clk);
 
 end architecture;
 

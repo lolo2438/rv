@@ -29,17 +29,17 @@ entity rob is
     i_disp_valid    : in std_logic;
     i_disp_rob      : in std_logic;                             --! Create an entry in the ROB
     i_disp_rd       : in std_logic_vector(REG_LEN-1 downto 0);  --! Destination register of the result
-    o_disp_wb_addr  : out std_logic_vector(ROB_LEN-1 downto 0); --! Rob address to write back the result
+    o_disp_qr       : out std_logic_vector(ROB_LEN-1 downto 0); --! Rob address to write back the result
 
     i_disp_rs1      : in std_logic_vector(REG_LEN-1 downto 0);  --! Source register for operand 1
-    o_disp_rs1_rdy  : out std_logic;                            --! Value found in the ROB for operand 1
-    o_disp_rs1_data : out std_logic_vector(XLEN-1 downto 0);    --! Data fowarded from ROB for operand 1
-    o_disp_rs1_addr : out std_logic_vector(ROB_LEN-1 downto 0); --! Rob address of the fowarded opreand 1
+    o_disp_vj       : out std_logic_vector(XLEN-1 downto 0);    --! Data fowarded from ROB for operand 1
+    o_disp_qj       : out std_logic_vector(ROB_LEN-1 downto 0); --! Rob address of the fowarded opreand 1
+    o_disp_rj       : out std_logic;                            --! Value found in the ROB for operand 1
 
     i_disp_rs2      : in std_logic_vector(REG_LEN-1 downto 0);  --! Source register for operant 2
-    o_disp_rs2_rdy  : out std_logic;                            --! Value found in the ROB for operand 2
-    o_disp_rs2_data : out std_logic_vector(XLEN-1 downto 0);    --! Data fowarded from ROB for operand 2
-    o_disp_rs2_addr : out std_logic_vector(ROB_LEN-1 downto 0); --! Rob address of the fowarded opreand 2
+    o_disp_vk       : out std_logic_vector(XLEN-1 downto 0);    --! Data fowarded from ROB for operand 2
+    o_disp_qk       : out std_logic_vector(ROB_LEN-1 downto 0); --! Rob address of the fowarded opreand 2
+    o_disp_rk       : out std_logic;                            --! Value found in the ROB for operand 2
 
     -- REG I/F
     o_reg_commit    : out std_logic;                            --! Rob is commiting a value that is ready and clearing it's entry
@@ -146,7 +146,7 @@ begin
 
   commit <= rob(rd_ptr).valid;
 
-  -- Check if RD = RS1
+  -- Check if RD = RS
   -- If 1 hit -> foward
   -- If multiple hits -> foward latest
   -- in any case: if hit but not valid, do not foward
@@ -215,7 +215,7 @@ begin
   ---
   -- OUTPUT
   ---
-  o_disp_wb_addr <= std_logic_vector(to_unsigned(wr_ptr, o_disp_wb_addr'length));
+  o_disp_qr <= std_logic_vector(to_unsigned(wr_ptr, o_disp_qr'length));
 
   o_full <= full;
 
@@ -223,12 +223,12 @@ begin
   o_reg_rd     <= rob(rd_ptr).rd;
   o_reg_result <= rob(rd_ptr).result;
 
-  o_disp_rs1_rdy  <= disp_rs(1).rob_rdy;
-  o_disp_rs1_data <= disp_rs(1).rob_data;
-  o_disp_rs1_addr <= disp_rs(1).rob_addr;
+  o_disp_rj <= disp_rs(1).rob_rdy;
+  o_disp_vj <= disp_rs(1).rob_data;
+  o_disp_qj <= disp_rs(1).rob_addr;
 
-  o_disp_rs2_rdy  <= disp_rs(2).rob_rdy;
-  o_disp_rs2_data <= disp_rs(2).rob_data;
-  o_disp_rs2_addr <= disp_rs(2).rob_addr;
+  o_disp_rk <= disp_rs(2).rob_rdy;
+  o_disp_vk <= disp_rs(2).rob_data;
+  o_disp_qk <= disp_rs(2).rob_addr;
 
 end architecture;

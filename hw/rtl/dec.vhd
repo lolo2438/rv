@@ -1,5 +1,5 @@
 --------------------------------------------------
---! \file rv_dec.vhd
+--! \file dec.vhd
 --! \author Laurent Tremblay
 --! \date 2024
 --! \version 1.0
@@ -22,136 +22,98 @@ entity dec is
     XLEN : natural
   );
   port (
-    i_wed     : in std_logic; -- Enable dispatch
-    i_inst    : in std_logic_vector(31 downto 0);
-
-    o_op      : out std_logic_vector(4 downto 0);
-    o_f12     : out std_logic_vector(11 downto 0);
-    o_f7      : out std_logic_vector(6 downto 0);
-    o_f3      : out std_logic_vector(2 downto 0);
-    o_imm     : out std_logic_vector(XLEN-1 downto 0);
-    o_rs1     : out std_logic_vector(4 downto 0);
-    o_rs2     : out std_logic_vector(4 downto 0);
-    o_rd      : out std_logic_vector(4 downto 0);
-
-    o_rob     : out std_logic; -- Entry must be created in ROB
-    o_bru     : out std_logic; -- Entry must be created in BRU
-    o_lsu     : out std_logic; -- Entry must be created in LSU
-    o_sys     : out std_logic; -- Entry must be created in SYS
-
-    o_inst_v  : out std_logic -- Instruction is valid
+    -- DISPATCH I/F
+    i_inst_disp   : in  std_logic;                           --! Dispatch a new instruction
+    i_inst        : in  std_logic_vector(31 downto 0);       --! Instruction
+    o_disp_op     : out std_logic_vector(4 downto 0);        --! Opcode
+    o_disp_f3     : out std_logic_vector(2 downto 0);        --! Funct3
+    o_disp_f7     : out std_logic_vector(6 downto 0);        --! Funct7
+    o_disp_imm    : out std_logic_vector(XLEN-1 downto 0);   --! Immediate value for exu
+    o_disp_rs1    : out std_logic_vector(4 downto 0);        --! RS1 address
+    o_disp_rs2    : out std_logic_vector(4 downto 0);        --! RS2 address
+    o_disp_rd     : out std_logic_vector(4 downto 0);        --! RD address
+    o_disp_f12    : out std_logic_vector(11 downto 0);       --! F12 for system operation
+    o_hint        : out std_logic;                           --! Specified instruction is a hint
+    o_illegal     : out std_logic                            --! Specified instruction is illegal
   );
 end entity;
 
 architecture rtl of dec is
 
   -- Instruction
-  signal i   : std_logic_vector(i_inst'range);
   signal q   : std_logic_vector(1 downto 0);
-  signal op  : std_logic_vector(o_op'range);
-  signal f3  : std_logic_vector(o_f3'range);
-  signal f7  : std_logic_vector(o_f7'range);
-  signal rs1 : std_logic_vector(o_rs1'range);
-  signal rs2 : std_logic_vector(o_rs2'range);
-  signal rd  : std_logic_vector(o_rd'range);
-  signal f12 : std_logic_vector(o_f12'range);
-
+  signal op  : std_logic_vector(4 downto 0);
+  signal f3  : std_logic_vector(2 downto 0);
+  signal f7  : std_logic_vector(6 downto 0);
+  signal rs1 : std_logic_vector(4 downto 0);
+  signal rs2 : std_logic_vector(4 downto 0);
+  signal rd  : std_logic_vector(4 downto 0);
+  signal f12 : std_logic_vector(11 downto 0);
   signal imm : std_logic_vector(XLEN-1 downto 0);
 
+
   -- Control
+  signal hint : std_logic;
   signal valid : std_logic;
 
 begin
 
-  i   <= i_inst;
+  q   <= i_inst(1 downto 0);
+  op  <= i_inst(6 downto 2);
+  f3  <= i_inst(14 downto 12);
+  f7  <= i_inst(31 downto 25);
 
-  q   <= i(1 downto 0);
-  op  <= i(6 downto 2);
-  rd  <= i(11 downto 7);
-  f3  <= i(14 downto 12);
-  rs1 <= i(19 downto 15);
-  rs2 <= i(24 downto 20);
-  f7  <= i(31 downto 25);
-  f12 <= i(31 downto 20);
+  o_disp_op <= op;
+  o_disp_f3 <= f3;
+  o_disp_f7 <= f7;
 
-  o_f12 <= f12;
-  o_f7  <= f7;
-  o_f3  <= f3;
-  o_rs1 <= rs1;
-  o_rs2 <= rs2;
-  o_rd  <= rd;
+  ---
+  -- BRU DECODER
+  ---
+  --o_bru_branch  <= '1' when op = OP_BRANCH else '0';
+  --o_bru_jalr    <= '1' when op = OP_JALR else '0';
+  --o_bru_jal     <= '1' when op = OP_JAL else '0';
 
-
-  p_rob:
-  process(op)
-    variable rob : std_logic;
-  begin
-    rob := '0';
-    case op is
-      -- EXLCUDED: OP_SYSTEM
-      when OP_OP | OP_IMM | OP_LUI | OP_AUIPC | OP_JAL | OP_JALR | OP_LOAD | OP_STORE | OP_BRANCH =>
-        rob := '1';
-      when others => -- Add extensions
-    end case;
-
-    o_rob <= rob;
-  end process;
+  ---
+  -- SYSTEM DECODER
+  ---
+  f12 <= i_inst(31 downto 20);
+  o_disp_f12 <= f12;
+  --o_sys <= '1' when op = OP_SYSTEM else '0';
 
 
-  p_bru:
-  process(op)
-    variable bru : std_logic;
-  begin
-    bru := '0';
-    case op is
-      when OP_BRANCH | OP_JAL | OP_JALR =>
-        bru := '1';
-      when others => -- Add extensions
-    end case;
+  ---
+  -- REGISTER DECODER
+  ---
+  rd  <= i_inst(11 downto 7);
+  rs1 <= i_inst(19 downto 15);
+  rs2 <= i_inst(24 downto 20);
 
-    o_bru <= bru;
-  end process;
+  --o_reg_wb  <= reg_wb;
 
-
-  p_lsu:
-  process(op)
-    variable lsu : std_logic;
-  begin
-    lsu := '0';
-    case op is
-      when OP_LOAD | OP_STORE | OP_MISC_MEM =>
-        lsu := '1';
-      when others => -- Add extensions
-    end case;
-
-    o_lsu <= lsu;
-  end process;
+  o_disp_rs1 <= rs1;
+  o_disp_rs2 <= rs2;
+  o_disp_rd  <= rd;
 
 
-  p_sys:
-  process(op)
-    variable sys : std_logic;
-  begin
-    sys := '0';
-    case op is
-      when OP_SYSTEM =>
-        sys := '1';
-      when others => -- Add extensions
-    end case;
-
-    o_sys <= sys;
-  end process;
+  ---
+  -- EXB DECODER
+  ---
+--  o_rob_lui     <= '1' when op = OP_LUI   else '0';
 
 
+  ---
+  -- IMMEDIATE DECODER
+  ---
   p_imm:
   process(all)
     variable i_imm, s_imm, b_imm, u_imm, j_imm : std_logic_vector(XLEN-1 downto 0);
   begin
-    i_imm := std_logic_vector(resize(signed(i(31 downto 20)), imm'length));
-    s_imm := std_logic_vector(resize(signed(i(31 downto 25) & i(11 downto 7)), imm'length));
-    b_imm := std_logic_vector(resize(signed(i(31) & i(7) & i(30 downto 25) & i(11 downto 8) & '0'), imm'length));
-    u_imm := i(31 downto 12) & std_logic_vector(resize(unsigned'("0"),12)) ;
-    j_imm := std_logic_vector(resize(signed(i(31) & i(19 downto 12) & i(20) & i(30 downto 21) & '0'), imm'length));
+    i_imm := std_logic_vector(resize(signed(i_inst(31 downto 20)), imm'length));
+    s_imm := std_logic_vector(resize(signed(i_inst(31 downto 25) & i_inst(11 downto 7)), imm'length));
+    b_imm := std_logic_vector(resize(signed(i_inst(31) & i_inst(7) & i_inst(30 downto 25) & i_inst(11 downto 8) & '0'), imm'length));
+    u_imm := i_inst(31 downto 12) & std_logic_vector(resize(unsigned'("0"),12)) ;
+    j_imm := std_logic_vector(resize(signed(i_inst(31) & i_inst(19 downto 12) & i_inst(20) & i_inst(30 downto 21) & '0'), imm'length));
 
     case op is
       when OP_IMM | OP_JALR | OP_LOAD =>
@@ -169,9 +131,12 @@ begin
     end case;
   end process;
 
-  o_imm <= imm;
+  o_disp_imm <= imm;
 
 
+  ---
+  -- ILLEGAL DECODER
+  ---
   p_valid:
   process(all)
   begin
@@ -236,6 +201,13 @@ begin
     end if;
   end process;
 
-  o_inst_v <= valid and i_wed;
+  o_illegal <= (not valid) and i_inst_disp;
+
+
+  ---
+  -- HINT DECODER
+  ---
+  hint <= '0';
+  o_hint <= hint;
 
 end architecture;

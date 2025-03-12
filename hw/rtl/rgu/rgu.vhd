@@ -1,0 +1,212 @@
+library ieee;
+use ieee.std_logic_1164.all;
+
+library riscv;
+use riscv.RV32I.all;
+
+library veyth;
+use veyth.tag_pkg.all;
+
+entity rgu is
+  generic(
+    RST_LEVEL : std_logic := '0';
+    ROB_LEN   : natural;
+    REG_LEN   : natural;
+    TAG_LEN   : natural;
+    XLEN      : natural
+  );
+  port(
+    i_clk         : in  std_logic;
+    i_srst        : in  std_logic;
+    i_arst        : in  std_logic;
+    o_rob_full    : out std_logic;
+
+    -- DISPATCH I/F
+    i_disp_valid  : in  std_logic;
+    i_disp_op     : in  std_logic_vector(4 downto 0);
+    i_disp_rs1    : in  std_logic_vector(4 downto 0);
+    i_disp_rs2    : in  std_logic_vector(4 downto 0);
+    i_disp_rd     : in  std_logic_vector(4 downto 0);
+    o_disp_tq     : out std_logic_vector(TAG_LEN-1 downto 0);
+
+    -- DATA I/F
+    o_data_vj     : out std_logic_vector(XLEN-1 downto 0);
+    o_data_tj     : out std_logic_vector(TAG_LEN-1 downto 0);
+    o_data_rj     : out std_logic;
+
+    o_data_vk     : out std_logic_vector(XLEN-1 downto 0);
+    o_data_tk     : out std_logic_vector(TAG_LEN-1 downto 0);
+    o_data_rk     : out std_logic;
+
+    -- CDB RD I/F
+    i_cdbr_vq     : in  std_logic_vector(XLEN-1 downto 0);
+    i_cdbr_tq     : in  std_logic_vector(TAG_LEN-1 downto 0);
+    i_cdbr_rq     : in  std_logic
+  );
+end entity;
+
+architecture rtl of rgu is
+
+  signal reg_wb       : std_logic;
+  signal rob_qr       : std_logic_vector(ROB_LEN-1 downto 0);
+
+  signal reg_vj       : std_logic_vector(XLEN-1 downto 0);
+  signal reg_qj       : std_logic_vector(ROB_LEN-1 downto 0);
+  signal reg_rj       : std_logic;
+
+  signal reg_vk       : std_logic_vector(XLEN-1 downto 0);
+  signal reg_qk       : std_logic_vector(ROB_LEN-1 downto 0);
+  signal reg_rk       : std_logic;
+
+  signal rob_vk       : std_logic_vector(XLEN-1 downto 0);
+  signal rob_qk       : std_logic_vector(ROB_LEN-1 downto 0);
+  signal rob_rk       : std_logic;
+
+  signal rob_vj       : std_logic_vector(XLEN-1 downto 0);
+  signal rob_qj       : std_logic_vector(ROB_LEN-1 downto 0);
+  signal rob_rj       : std_logic;
+
+  signal rob_commit   : std_logic;
+  signal rob_rd       : std_logic_vector(REG_LEN-1 downto 0);
+  signal rob_result   : std_logic_vector(XLEN-1 downto 0);
+
+  signal rob_full     : std_logic;
+
+  signal vj, vk       : std_logic_vector(XLEN-1 downto 0);
+  signal tj, tk       : std_logic_vector(TAG_LEN-1 downto 0);
+  signal rj, rk       : std_logic;
+
+  signal cdb_rj       : std_logic;
+  signal cdb_rk       : std_logic;
+
+begin
+
+
+  -- TODO: no need to wb when rd=0
+  p_reg_wb:
+  process(i_disp_op)
+  begin
+    reg_wb <= '0';
+      case i_disp_op is
+        -- EXLCUDED: OP_SYSTEM
+        when OP_OP | OP_IMM | OP_LUI | OP_AUIPC | OP_JAL | OP_JALR | OP_LOAD  =>
+          reg_wb <= '1';
+        when others => -- Add extensions
+      end case;
+  end process;
+
+
+  u_reg:
+  entity veyth.reg
+  generic map(
+    RST_LEVEL => RST_LEVEL,
+    REG_LEN   => REG_LEN,
+    ROB_LEN   => ROB_LEN,
+    XLEN      => XLEN
+  )
+  port map(
+    i_clk        => i_clk,
+    i_arst       => i_arst,
+    i_srst       => i_srst,
+    i_disp_rs1   => i_disp_rs1,
+    o_reg_vj     => reg_vj,
+    o_reg_qj     => reg_qj,
+    o_reg_rj     => reg_rj,
+    i_disp_rs2   => i_disp_rs2,
+    o_reg_vk     => reg_vk,
+    o_reg_qk     => reg_qk,
+    o_reg_rk     => reg_rk,
+    i_disp_wb    => reg_wb,
+    i_disp_valid => i_disp_valid,
+    i_disp_rd    => i_disp_rd,
+    i_disp_qr    => rob_qr,
+    i_wb_we      => rob_commit,
+    i_wb_rd      => rob_rd,
+    i_wb_data    => rob_result
+  );
+
+
+  u_rob:
+  entity veyth.rob
+  generic map(
+    RST_LEVEL => RST_LEVEL,
+    REG_LEN   => REG_LEN,
+    ROB_LEN   => ROB_LEN,
+    XLEN      => XLEN
+  )
+  port map(
+    i_clk           => i_clk,
+    i_arst          => i_arst,
+    i_srst          => i_srst,
+    i_flush         => '0',
+    o_full          => rob_full,
+    i_disp_valid    => i_disp_valid,
+    i_disp_rob      => reg_wb,
+    i_disp_rd       => i_disp_rd,
+    o_disp_qr       => rob_qr,
+    i_disp_rs1      => i_disp_rs1,
+    o_disp_vj       => rob_vj,
+    o_disp_qj       => rob_qj,
+    o_disp_rj       => rob_rj,
+    i_disp_rs2      => i_disp_rs2,
+    o_disp_vk       => rob_vk,
+    o_disp_qk       => rob_qk,
+    o_disp_rk       => rob_rk,
+    o_reg_commit    => rob_commit,
+    o_reg_rd        => rob_rd,
+    o_reg_result    => rob_result,
+    i_wb_addr       => i_cdbr_tq(ROB_LEN-1 downto 0),
+    i_wb_result     => i_cdbr_vq,
+    i_wb_valid      => i_cdbr_rq
+  );
+
+  -- Priority analysis for READY
+  -- CDB | ROB | REG | Select
+  --  0  |  0  |  0  |   X  Only happens at startup
+  --  0  |  0  |  1  |  REG
+  --  0  |  1  |  0  |  ROB
+  --  0  |  1  |  1  |  REG
+  --  1  |  0  |  0  |  CDB
+  --  1  |  0  |  1  |  REG
+  --  1  |  1  |  0  |  CDB
+  --  1  |  1  |  1  |  REG
+  -- REG > CDB > ROB
+  --
+  --
+  --
+  --
+
+
+  -- Fowarding
+  -- FIXME: To foward one must know if rs = rd, but the tag is located in the ROB
+  --        Therefore, the CDB can't know and the fowarding is combinatorial in the ROB
+ -- cdb_rj <= '1' when i_cdb_rq = '1' and i_cdb_tq(ROB_LEN-1 downto 0) =  else '0';
+  vj <= reg_vj    when reg_rj = '1' else
+        i_cdbr_vq  when cdb_rj = '1' else
+        rob_vj    when rob_rj = '1' else
+        (others => 'X');
+  tj <= TAG_ROB & reg_qj;
+  rj <= reg_rj or cdb_rj or rob_rj;
+
+ -- cdb_rk <= '1' when i_cdb_rq = '1' and i_cdb_tq(ROB_LEN-1 downto 0) =  else '0';
+  -- vk
+  tk <= TAG_ROB & reg_qk;
+  rk <= reg_rk or cdb_rk or rob_rk;
+
+
+  ---
+  -- OUTPUT
+  ---
+  o_rob_full <= rob_full;
+
+  o_disp_tq <= TAG_ROB & rob_qr;
+
+  o_data_vj <= vj;
+  o_data_tj <= tj;
+  o_data_rj <= rj;
+
+  o_data_vk <= vk;
+  o_data_tk <= tk;
+  o_data_rk <= rk;
+
+end architecture;

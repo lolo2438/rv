@@ -32,11 +32,12 @@ entity ldb is
     i_disp_va     : in  std_logic_vector(XLEN-1 downto 0);        --! Address field value for Load/Store
     i_disp_ta     : in  std_logic_vector(TAG_LEN-1 downto 0);     --! Address tag to look for if it's not ready
     i_disp_ra     : in  std_logic;                                --! Address ready flag
+    o_disp_qr     : out std_logic_vector(LDB_LEN-1 downto 0);     --! LDB Address to write back to
 
-    -- CDB I/F
-    i_cdb_vq      : in  std_logic_vector(XLEN-1 downto 0);        --! Data from the CDB bus
-    i_cdb_tq      : in  std_logic_vector(TAG_LEN-1 downto 0);     --! Tag from the CDB bus
-    i_cdb_rq      : in  std_logic;                                --! CDB Ready flag
+    -- CDB RD I/F
+    i_cdbr_vq      : in  std_logic_vector(XLEN-1 downto 0);        --! Data from the CDB bus
+    i_cdbr_tq      : in  std_logic_vector(TAG_LEN-1 downto 0);     --! Tag from the CDB bus
+    i_cdbr_rq      : in  std_logic;                                --! CDB Ready flag
 
     -- GROUP I/F
     i_wr_grp        : in  std_logic_vector(GRP_LEN-1 downto 0);     --! Group to attribute to the stores
@@ -61,11 +62,11 @@ entity ldb is
     i_wb_data       : out std_logic_vector(XLEN-1 downto 0);          --! Write back data
 
     -- CDB WR I/F
-    o_cdb_vq      : out std_logic_vector(XLEN-1 downto 0);     --! Data to write on the bus
-    o_cdb_tq      : out std_logic_vector(TAG_LEN-1 downto 0);  --! Tag to write on the CDB bus
-    o_cdb_req     : out std_logic;                             --! Request to the CDB bus
-    o_cdb_lh      : out std_logic;                             --! Look Ahead flag indicates that there are at least 2 values that are ready
-    i_cdb_ack     : in  std_logic                              --! Acknowledge from the CDB bus
+    o_cdbw_vq      : out std_logic_vector(XLEN-1 downto 0);     --! Data to write on the bus
+    o_cdbw_tq      : out std_logic_vector(TAG_LEN-1 downto 0);  --! Tag to write on the CDB bus
+    o_cdbw_req     : out std_logic;                             --! Request to the CDB bus
+    o_cdbw_lh      : out std_logic;                             --! Look Ahead flag indicates that there are at least 2 values that are ready
+    i_cdbw_ack     : in  std_logic                              --! Acknowledge from the CDB bus
   );
 end entity;
 
@@ -136,7 +137,7 @@ begin
 
   commit <= i_issue_rdy and rd_grp_match;
 
-  retire <= i_cdb_ack;
+  retire <= i_cdbw_ack;
 
   wb_data_f3 <= ldb(to_integer(unsigned(i_wb_ldb_ptr))).f3;
 
@@ -172,6 +173,7 @@ begin
   --TODO
   --retire_ptr <=
 
+
   p_ldb:
   process(i_clk, i_arst)
   begin
@@ -184,6 +186,8 @@ begin
           ldb(i).done     <= '0';
         end loop;
 
+        --FIXME
+        -- No values set this ptr
         disp_ptr <= 0;
       else
         -- NEW ENTRY
@@ -192,14 +196,14 @@ begin
         end if;
 
         -- CDB WRITE BACK
-        if i_cdb_rq = '1' then
+        if i_cdbr_rq = '1' then
           for i in 0 to STB_SIZE-1 loop
             if (ldb(i).busy      = '1' and
                 ldb(i).commited  = '0' and
                 ldb(i).addr_rdy  = '0' and
-                ldb(i).addr_src  = i_cdb_tq) then
+                ldb(i).addr_src  = i_cdbr_tq) then
 
-                ldb(i).addr     <= i_cdb_vq;
+                ldb(i).addr     <= i_cdbr_vq;
                 ldb(i).addr_rdy <= '1';
             end if;
           end loop;
@@ -260,7 +264,7 @@ begin
 
   sched_wr_addr <= std_logic_vector(to_unsigned(disp_ptr, sched_wr_addr'length));
 
-  u_ldb_shed: entity work.rv_otm(rtl)
+  u_ldb_shed: entity work.otm(rtl)
   generic map (
     RST_LEVEL => RST_LEVEL,
     ADDR_LEN  => LDB_LEN
@@ -284,6 +288,8 @@ begin
   ---
   -- OUTPUT
   ---
+  o_disp_qr <= sched_wr_addr;
+
   o_issue_valid   <= commit;
   o_issue_addr    <= ldb(issue_ptr).addr;
   o_rd_grp_match  <= rd_grp_match;
@@ -291,10 +297,10 @@ begin
 
   o_full      <= full;
 
-  o_cdb_req   <= or done_flags;
-  o_cdb_lh    <= ldb_lh;
-  o_cdb_vq    <= ldb(retire_ptr).data;
-  o_cdb_tq    <= ldb(retire_ptr).data_dst;
+  o_cdbw_req   <= or done_flags;
+  o_cdbw_lh    <= ldb_lh;
+  o_cdbw_vq    <= ldb(retire_ptr).data;
+  o_cdbw_tq    <= ldb(retire_ptr).data_dst;
 
 end architecture;
 

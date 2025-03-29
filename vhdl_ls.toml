@@ -1,39 +1,45 @@
-standard = "2008"
-
-[libraries]
-riscv.files = [
-    'hw/pkg/riscv/*.vhd',
+[libraries.vunit_lib]
+files = [
+    #"/usr/lib/python3.13/site-packages/vunit/vhdl/data_types/src/*.vhd",
+    #"/usr/lib/python3.13/site-packages/vunit/vhdl/logging/src/*.vhd",
+    "/usr/lib/python3.13/site-packages/vunit/vhdl/*.vhd",
+    "/usr/lib/python3.13/site-packages/vunit/vhdl/**/src/*.vhd",
+    #"/usr/lib/python3.13/site-packages/vunit/vhdl/core/src/*.vhd",
+    #"/usr/lib/python3.13/site-packages/vunit/vhdl/string_ops/src/*.vhd",
+    #"/usr/lib/python3.13/site-packages/vunit/vhdl/check/src/*.vhd",
+    #"/usr/lib/python3.13/site-packages/vunit/vhdl/dictionary/src/*.vhd",
+    #"/usr/lib/python3.13/site-packages/vunit/vhdl/run/src/*.vhd",
+    #"/usr/lib/python3.13/site-packages/vunit/vhdl/path/src/*.vhd",
 ]
 
-tb.files = [
-    'hw/pkg/tb/*.vhd',
-    'hw/test/*.vhd'
-
+[libraries.osvvm]
+files = [
+    "/usr/lib/python3.13/site-packages/vunit/vhdl/osvvm/*.vhd",
 ]
 
-vex.files = [
-    'hw/pkg/common/*.vhd',
-    'hw/rtl/common/*.vhd',
-    'hw/rtl/lsu/*.vhd',
-    'hw/rtl/*.vhd'
+[libraries.riscv]
+files = [
+    "/home/laurent/Development/rv/hw/pkg/riscv/*.vhd",
+    ]
+
+[libraries.common]
+files = [
+    "/home/laurent/Development/rv/hw/pkg/common/*.vhd",
+    ]
+
+[libraries.sim]
+files = [
+    "/home/laurent/Development/rv/hw/pkg/tb/*.vhd",
+    "/home/laurent/Development/rv/hw/sim/tb/*_tb.vhd",
 ]
 
-vunit_lib.files = [
-    '/usr/lib/python3.12/site-packages/vunit/vhdl/core/src/*.vhd',
-    '/usr/lib/python3.12/site-packages/vunit/vhdl/com/src/*.vhd',
-    '/usr/lib/python3.12/site-packages/vunit/vhdl/array/src/*.vhd',
-    '/usr/lib/python3.12/site-packages/vunit/vhdl/dictionary/src/*.vhd',
-    '/usr/lib/python3.12/site-packages/vunit/vhdl/logging/src/*.vhd',
-    '/usr/lib/python3.12/site-packages/vunit/vhdl/path/src/*.vhd',
-    '/usr/lib/python3.12/site-packages/vunit/vhdl/random/src/*.vhd',
-    '/usr/lib/python3.12/site-packages/vunit/vhdl/string_ops/src/*.vhd',
-    '/usr/lib/python3.12/site-packages/vunit/vhdl/check/src/*.vhd',
-    '/usr/lib/python3.12/site-packages/vunit/vhdl/data_types/src/*.vhd',
-    '/usr/lib/python3.12/site-packages/vunit/vhdl/run/src/*.vhd',
-    '/usr/lib/python3.12/site-packages/vunit/vhdl/verification_components/src/*.vhd',
-    '/usr/lib/python3.12/site-packages/vunit/vhdl/*.vhd'
-]
-
-osvvm.files = [
-    '/usr/lib/python3.12/site-packages/vunit/vhdl/osvvm/*.vhd'
+[libraries.hw]
+files = [
+    #"/home/laurent/Development/rv/hw/src/common/*.vhd",
+    #"/home/laurent/Development/rv/hw/src/exu/*.vhd",
+    #"/home/laurent/Development/rv/hw/src/rgu/rgu.vhd",
+    #"/home/laurent/Development/rv/hw/src/lsu/stb.vhd",
+    #"/home/laurent/Development/rv/hw/src/flt/fmul.vhd",
+    "/home/laurent/Development/rv/hw/src/**/*.vhd",
+    "/home/laurent/Development/rv/hw/src/*.vhd",
 ]

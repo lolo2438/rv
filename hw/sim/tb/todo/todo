@@ -1,0 +1,17 @@
+lsu_tb
+* ldu_tb
+* stu_tb
+
+exu_tb
+* exb_tb
+* alu_tb
+
+rgu_tb
+* reg_tb
+* rob_tb
+
+sys_tb
+
+dec_tb
+
+core_tb

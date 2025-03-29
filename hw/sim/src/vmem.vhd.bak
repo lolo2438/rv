@@ -1,0 +1,86 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use ieee.std_logic_textio.all;
+
+library common;
+use common.cnst.BYTE;
+
+library std;
+use std.textio.all;
+use std.standard.all;
+use std.env.all;
+
+entity vmem is
+  generic (
+    FILE_NAME   : string;                                         --! Name of the file to open
+    ADDR_LEN    : natural;                                        --! Address length of the memory
+    DATA_LEN    : natural                                         --! Data length of the memory
+  );
+  port (
+    i_en      : in  boolean;                                      --! Memory enable
+
+    i_clk     : in  std_logic;                                    --! Clock
+    i_we      : in  std_logic_vector(DATA_LEN/BYTE-1 downto 0);   --! Byte wide write enable
+    i_addr    : in  std_logic_vector(ADDR_LEN-1 downto 0);        --! Memory address
+    i_data    : in  std_logic_vector(DATA_LEN-1 downto 0);        --! Input Data to write
+    o_data    : out std_logic_vector(DATA_LEN-1 downto 0)         --! Output data to read
+  );
+end entity;
+
+architecture sim of vmem is
+  constant NBYTES : natural := DATA_LEN / BYTE;
+begin
+
+  -- Sanity Check
+  assert (BYTE = 8)               report "Byte is not = to 8"                 severity failure;
+  assert (DATA_LEN mod BYTE) = 0  report "DATA_LEN is not a byte multiple"    severity failure;
+
+  -- Main process
+  p_vmem:
+  process
+    file mem : text open READ_WRITE_MODE is FILE_NAME;
+    variable mem_val  : string(NBYTES-1 downto 0);
+    variable data_str : string(NBYTES-1 downto 0);
+    variable data_vec : std_logic_vector(DATA_LEN-1 downto 0);
+  begin
+    if file_open(mem, FILE_NAME, READ_WRITE_MODE) /= OPEN_OK then
+      report "Failed to open file " & FILE_NAME severity failure;
+      std.env.stop;
+    end if;
+
+    -- Init the file
+    report "initializing memory" severity note;
+    for i in 0 to 2**ADDR_LEN-1 loop
+      write(mem, string("" & character'val(0)));
+    end loop;
+
+    while i_en loop
+      wait until rising_edge(i_clk);
+
+      file_seek(mem, to_integer(unsigned(i_addr)));
+
+      read(mem, mem_val);
+      -- Write
+      for i in 0 to NBYTES-1 loop
+        if i_we(i) = '1' then
+          data_str(i) := character'val(to_integer(unsigned(i_data((i+1)*BYTE-1 downto i*BYTE))));
+        else
+          data_str(i) := mem_val(i);
+        end if;
+
+        write(mem, data_str);
+      end loop;
+
+      -- Read
+      for i in 0 to NBYTES-1 loop
+        data_vec((i+1)*BYTE-1 downto i*BYTE) := std_logic_vector(to_unsigned(character'pos(mem_val(i)), BYTE));
+      end loop;
+
+      o_data <= data_vec;
+    end loop;
+
+    file_close(mem);
+  end process;
+
+end architecture;

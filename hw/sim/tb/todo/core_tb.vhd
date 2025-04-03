@@ -38,6 +38,7 @@ architecture tb of core_tb is
   signal core_arst          : std_logic := not RST_LEVEL;
   signal core_srst          : std_logic;
   signal core_en            : std_logic;
+  signal core_restart       : std_logic;
 
   signal core_stalled       : std_logic;
   signal core_halted        : std_logic;
@@ -58,18 +59,18 @@ architecture tb of core_tb is
   signal core_imem_rdy      : std_logic;
   signal core_imem_avalid   : std_logic;
   signal core_imem_dvalid   : std_logic;
-  signal core_imem_addr     : std_logic_vector(IMEM_ADDR_WIDTH-1 downto 0);
-  signal core_imem_rdata    : std_logic_vector(IMEM_DATA_WIDTH-1 downto 0);
+  signal core_imem_addr     : std_logic_vector(XLEN-1 downto 0);
+  signal core_imem_rdata    : std_logic_vector(XLEN-1 downto 0);
 
 
   -- DMEM
   signal tb_dmem_sel        : std_logic;
   signal tb_dmem_we         : std_logic_vector(DMEM_DATA_WIDTH/BYTE-1 downto 0);
-  signal tb_dmem_waddr      : std_logic_vector(XLEN-1 downto 0);
-  signal tb_dmem_wdata      : std_logic_vector(XLEN-1 downto 0);
+  signal tb_dmem_waddr      : std_logic_vector(DMEM_ADDR_WIDTH-1 downto 0);
+  signal tb_dmem_wdata      : std_logic_vector(DMEM_DATA_WIDTH-1 downto 0);
 
-  signal tb_dmem_raddr      : std_logic_vector(XLEN-1 downto 0);
-  signal tb_dmem_rdata      : std_logic_vector(XLEN-1 downto 0);
+  signal tb_dmem_raddr      : std_logic_vector(DMEM_ADDR_WIDTH-1 downto 0);
+  signal tb_dmem_rdata      : std_logic_vector(DMEM_DATA_WIDTH-1 downto 0);
 
   signal core_dmem_rrdy     : std_logic;
   signal core_dmem_rdvalid  : std_logic;
@@ -85,72 +86,12 @@ architecture tb of core_tb is
 
   signal dmem_en            : std_logic;
   signal dmem_we            : std_logic_vector(DMEM_DATA_WIDTH/BYTE-1 downto 0);
-  signal dmem_raddr         : std_logic_vector(XLEN-1 downto 0);
-  signal dmem_rdata         : std_logic_vector(XLEN-1 downto 0);
-  signal dmem_waddr         : std_logic_vector(XLEN-1 downto 0);
-  signal dmem_wdata         : std_logic_vector(XLEN-1 downto 0);
+  signal dmem_raddr         : std_logic_vector(DMEM_ADDR_WIDTH-1 downto 0);
+  signal dmem_rdata         : std_logic_vector(DMEM_DATA_WIDTH-1 downto 0);
+  signal dmem_waddr         : std_logic_vector(DMEM_ADDR_WIDTH-1 downto 0);
+  signal dmem_wdata         : std_logic_vector(DMEM_DATA_WIDTH-1 downto 0);
 
 
-  --! \param[in] file_name The name of the file to load into the instruction memory
-  --! \brief Loads a program into the instruction memory
-  --!        The file format is one instruction per line, each instruction being a
-  --!        4 bytes word encoded in ascii characters
-  --!        Example: $ cat instruction.mem
-  --!                 1A2B3C4D
-  --!                 AABBCCDD
-  --!                 DEADBEEF
-  --!                 ...
-  --!        The instructions are loaded each clock cycles in the instruction memory
-  --!
-  --! \note The program is loaded starting at address 0 in the instruction memory
-  --! \note This procedure will assert a failure if the number of instructions is greater
-  --!       than the memory allocated
-  procedure imem_load_program(file_name : in string)
-  is
-    file ifile      : text;
-    variable iline  : line;
-    variable inst   : std_logic_vector(31 downto 0);
-    variable addr   : natural;
-  begin
-    file_open(ifile, file_name, READ_MODE);
-
-    core_en     <= '0';
-    tb_imem_sel <= '1';
-
-    wait until rising_edge(core_clk);
-
-    addr := 0;
-    while not endfile(ifile) loop
-      assert addr < 2**IMEM_ADDR_WIDTH
-      report "Specified instruction file is too big, can only " & to_string(2**IMEM_ADDR_WIDTH) & " instructions"
-      severity failure;
-
-      readline(ifile, iline);
-      hread (iline, inst);
-      tb_imem_addr <= std_logic_vector(to_unsigned(addr, tb_imem_addr'length));
-      tb_imem_wdata <= inst;
-      tb_imem_we <= (others => '1');
-      wait until rising_edge(core_clk);
-
-      addr := addr + 1;
-    end loop;
-
-    tb_imem_we <= (others => '0');
-    tb_imem_sel <= '0';
-
-    file_close(ifile);
-  end procedure;
-
-  procedure run_program is
-  begin
-    core_srst <= '1';
-    wait until rising_edge(core_clk);
-    core_srst <= '0';
-
-    core_en <= '1';
-    wait until (core_halted = '1' and core_debug = '1');
-    core_en <= '0';
-  end procedure;
 
 
   --procedure dmem_write_byte(addr : in std_logic_vector(DMEM_ADDRWIDTH-1 downto 0);
@@ -223,6 +164,68 @@ begin
 
   main:
   process
+
+    --! \param[in] file_name The name of the file to load into the instruction memory
+    --! \brief Loads a program into the instruction memory
+    --!        The file format is one instruction per line, each instruction being a
+    --!        4 bytes word encoded in ascii characters
+    --!        Example: $ cat instruction.mem
+    --!                 1A2B3C4D
+    --!                 AABBCCDD
+    --!                 DEADBEEF
+    --!                 ...
+    --!        The instructions are loaded each clock cycles in the instruction memory
+    --!
+    --! \note The program is loaded starting at address 0 in the instruction memory
+    --! \note This procedure will assert a failure if the number of instructions is greater
+    --!       than the memory allocated
+    procedure imem_load_program(file_name : in string)
+    is
+      file ifile      : text;
+      variable iline  : line;
+      variable inst   : std_logic_vector(31 downto 0);
+      variable addr   : natural;
+    begin
+      file_open(ifile, file_name, READ_MODE);
+
+      core_en     <= '0';
+      tb_imem_sel <= '1';
+
+      wait until rising_edge(core_clk);
+
+      addr := 0;
+      while not endfile(ifile) loop
+        assert addr < 2**IMEM_ADDR_WIDTH
+        report "Specified instruction file is too big, can only " & to_string(2**IMEM_ADDR_WIDTH) & " instructions"
+        severity failure;
+
+        readline(ifile, iline);
+        hread (iline, inst);
+        tb_imem_addr <= std_logic_vector(to_unsigned(addr, tb_imem_addr'length));
+        tb_imem_wdata <= inst;
+        tb_imem_we <= (others => '1');
+        wait until rising_edge(core_clk);
+
+        addr := addr + 1;
+      end loop;
+
+      tb_imem_we <= (others => '0');
+      tb_imem_sel <= '0';
+
+      file_close(ifile);
+    end procedure;
+
+    procedure run_program is
+    begin
+      core_srst <= '1';
+      wait until rising_edge(core_clk);
+      core_srst <= '0';
+
+      core_en <= '1';
+      wait until (core_halted = '1' and core_debug = '1');
+      core_en <= '0';
+    end procedure;
+
   begin
     test_runner_setup(runner, runner_cfg);
 
@@ -302,6 +305,7 @@ begin
     i_arst          => core_arst,
     i_srst          => core_srst,
     i_en            => core_en,
+    i_restart       => core_restart,
     o_stall         => core_stalled,
     o_halt          => core_halted,
     o_debug         => core_debug,

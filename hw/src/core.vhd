@@ -20,6 +20,7 @@ entity core is
     i_arst          : in  std_logic;                            --! Asynchronous reset
     i_srst          : in  std_logic;                            --! Synchronous reset
     i_en            : in  std_logic;                            --! Enable the processor
+    i_restart       : in  std_logic;                            --! Restart the core when state is DEBUG and HALTED
 
     -- STATUS I/F
     o_stall         : out std_logic;                            --! Core is not accepting new instructions
@@ -184,7 +185,7 @@ begin
     i_disp_valid  => disp_valid,
     i_disp_op     => disp_op,
     i_disp_f12    => disp_f12,
-    i_en          => i_en,
+    i_en          => i_en or i_imem_rdy,
     i_restart     => i_restart,
     i_full        => sys_full,
     i_empty       => sys_empty,

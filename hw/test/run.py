@@ -57,7 +57,7 @@ hw_lib.add_source_files("../src/lsu/*.vhd")
 hw_lib.add_source_files("../src/flt/*.vhd")
 hw_lib.add_source_files("../src/*.vhd")
 
-_gen_vhdl_db(vu, "vhdl_ls.toml")
+#_gen_vhdl_db(vu, "vhdl_ls.toml")
 
-#vu.main()
+vu.main()
 

@@ -38,7 +38,7 @@ package fnct is
   --! \param[out] mem The memory to initialize
   --! \brief Intializes the content of mem with the content of the hexadecimal file specified
   --! \note The content of the file MUST be in hexadecimal and MUST match the size of the memory
-  pure function init_mem_from_hex_file(file_name : in string) return std_logic_matrix;
+  --pure function init_mem_from_hex_file(file_name : in string) return std_logic_matrix;
 
 end package;
 
@@ -46,39 +46,39 @@ end package;
 package body fnct is
 
 
-  pure function init_mem_from_hex_file(file_name : in string) return std_logic_matrix
-  is
-    file f : text;
-    variable l : line;
-    variable status : file_open_status;
-    variable i : natural := 0;
-    variable mem : std_logic_matrix;
-  begin
-    file_open(status, f, file_name, READ_MODE);
-    if status /= OPEN_OK then
-      report "Invalid file specified to initialize memory" severity note;
-      return;
-    end if;
+  --pure function init_mem_from_hex_file(file_name : in string) return std_logic_matrix
+  --is
+  --  file f : text;
+  --  variable l : line;
+  --  variable status : file_open_status;
+  --  variable i : natural := 0;
+  --  variable mem : std_logic_matrix;
+  --begin
+  --  file_open(status, f, file_name, READ_MODE);
+  --  if status /= OPEN_OK then
+  --    report "Invalid file specified to initialize memory" severity note;
+  --    return;
+  --  end if;
 
-    while not endfile(f) loop
-      assert i < mem'length
-      report "Specified memory file " & file_name & " is greater than current memory size"
-      severity failure;
+  --  while not endfile(f) loop
+  --    assert i < mem'length
+  --    report "Specified memory file " & file_name & " is greater than current memory size"
+  --    severity failure;
 
-      readline(f, l);
+  --    readline(f, l);
 
-      -- There should be 2 hexadecimal character per bytes
-      assert l'length * BYTE/2 = mem(i)'length
-      report "Invalid length of data specified to initialize memory in file " & file_name & " at line " & to_string(i)
-      severity failure;
+  --    -- There should be 2 hexadecimal character per bytes
+  --    assert l'length * BYTE/2 = mem(i)'length
+  --    report "Invalid length of data specified to initialize memory in file " & file_name & " at line " & to_string(i)
+  --    severity failure;
 
-      hread(l, mem(i));
-      i := i + 1;
-    end loop;
-    file_close(f);
+  --    hread(l, mem(i));
+  --    i := i + 1;
+  --  end loop;
+  --  file_close(f);
 
-    return mem;
-  end function;
+  --  return mem;
+  --end function;
 
 
   pure function clog2 (x : positive) return positive is

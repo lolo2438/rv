@@ -4,7 +4,6 @@ use ieee.numeric_std.all;
 
 library common;
 use common.types.std_logic_matrix;
-use common.fnct.init_mem_from_hex_file;
 
 entity spmem is
   generic(

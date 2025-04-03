@@ -13,5 +13,6 @@ rgu_tb
 sys_tb
 
 dec_tb
+decompress_tb
 
 core_tb

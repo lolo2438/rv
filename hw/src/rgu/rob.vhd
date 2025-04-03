@@ -24,6 +24,7 @@ entity rob is
     i_srst          : in  std_logic;                            --! Synchronous reset
     i_flush         : in  std_logic;                            --! Flush the content of the ROB
     o_full          : out std_logic;                            --! Rob is full
+    o_empty         : out std_logic;                            --! Rob is empty
 
     -- Dispatch I/F
     i_disp_valid    : in std_logic;
@@ -78,9 +79,12 @@ architecture rtl of rob is
 
   signal rob_buf : rob_buf_t;
 
-  signal wr_ptr : natural range 0 to ROB_SIZE-1;
-  signal rd_ptr : natural range 0 to ROB_SIZE-1;
+  signal busy_flag : std_logic_vector(ROB_SIZE-1 downto 0);
+
+  signal wr_ptr : unsigned(ROB_LEN-1 downto 0);
+  signal rd_ptr : unsigned(ROB_LEN-1 downto 0);
   signal full   : std_logic;
+  signal empty  : std_logic;
 
   signal commit : std_logic;
 
@@ -94,36 +98,37 @@ begin
   ---
 
   p_rob_buf:
-  process(i_clk)
+  process(i_clk, i_arst)
     variable wb_addr : natural;
   begin
     if i_arst = RST_LEVEL then
       for i in 0 to ROB_SIZE-1 loop
         rob_buf(i).busy <= '0';
       end loop;
-      wr_ptr <= 0;
-      rd_ptr <= 0;
+      wr_ptr <= (others => '0');
+      rd_ptr <= (others => '0');
 
     elsif rising_edge(i_clk) then
       if i_srst = RST_LEVEL then
         for i in 0 to ROB_SIZE-1 loop
           rob_buf(i).busy <= '0';
         end loop;
-        wr_ptr <= 0;
-        rd_ptr <= 0;
+        wr_ptr <= (others => '0');
+        rd_ptr <= (others => '0');
       else
         if i_flush = '1' then
           for i in 0 to ROB_SIZE-1 loop
             rob_buf(i).busy <= '0';
           end loop;
-          wr_ptr <= 0;
-          rd_ptr <= 0;
+          wr_ptr <= (others => '0');
+          rd_ptr <= (others => '0');
         else
           -- Dispatch
           if disp = '1' and full = '0' then
-            rob_buf(wr_ptr).rd <= i_disp_rd;
-            rob_buf(wr_ptr).busy <= '1';
-            rob_buf(wr_ptr).valid <= '0';
+            rob_buf(to_integer(wr_ptr)).rd    <= i_disp_rd;
+            rob_buf(to_integer(wr_ptr)).busy  <= '1';
+            rob_buf(to_integer(wr_ptr)).valid <= '0';
+
             wr_ptr <= wr_ptr + 1;
           end if;
 
@@ -136,7 +141,7 @@ begin
 
           -- Commit
           if commit = '1' then
-            rob_buf(rd_ptr).busy <= '0';
+            rob_buf(to_integer(rd_ptr)).busy <= '0';
             rd_ptr <= rd_ptr + 1;
           end if;
         end if;
@@ -144,7 +149,7 @@ begin
     end if;
   end process;
 
-  commit <= rob_buf(rd_ptr).valid;
+  commit <= rob_buf(to_integer(rd_ptr)).valid and rob_buf(to_integer(rd_ptr)).busy;
 
   -- Check if RD = RS
   -- If 1 hit -> foward
@@ -161,9 +166,9 @@ begin
     b_rob_buf_foward_rs:
     block
       signal rs : std_logic_vector(REG_LEN-1 downto 0);   -- register source addr
-      signal hit : std_logic_vector(ROB_LEN-1 downto 0);  -- hit vector
-      signal rhit : std_logic_vector(ROB_LEN-1 downto 0); -- rotated hit vector
-      signal rob_buf_fwd_addr : natural range 0 to ROB_SIZE-1;
+      signal hit : std_logic_vector(0 to ROB_SIZE-1);  -- hit vector
+      signal rhit : std_logic_vector(0 to ROB_SIZE-1); -- rotated hit vector
+      signal rob_buf_fwd_addr : unsigned(ROB_LEN-1 downto 0);
     begin
       rs <= disp_rs(k).reg_addr;
 
@@ -179,12 +184,12 @@ begin
         end loop;
       end process;
 
-      rhit <= hit ror rd_ptr;
+      rhit <= hit ror to_integer(rd_ptr);
 
       p_prio_enc:
       process(all)
       begin
-        rob_buf_fwd_addr <= 0;
+        rob_buf_fwd_addr <= (others => '0');
         for i in 0 to ROB_SIZE-1 loop
           if rhit(i) = '1' then
             rob_buf_fwd_addr <= i + rd_ptr;
@@ -193,35 +198,33 @@ begin
       end process;
 
       disp_rs(k).rob_rdy  <= or hit;
-      disp_rs(k).rob_data <= rob_buf(rob_buf_fwd_addr).result;
-      disp_rs(k).rob_addr <= std_logic_vector(to_unsigned(rob_buf_fwd_addr,ROB_LEN));
+      disp_rs(k).rob_data <= rob_buf(to_integer(rob_buf_fwd_addr)).result;
+      disp_rs(k).rob_addr <= std_logic_vector(rob_buf_fwd_addr);
     end block;
   end generate;
 
   ---
   -- CONTROL
   ---
+  g_rob_flags:
+  for i in 0 to ROB_SIZE-1 generate
+    busy_flag(i) <= rob_buf(i).busy;
+  end generate;
 
-  p_rob_buf_full:
-  process(all)
-    variable vfull : std_logic := '1';
-  begin
-    for i in 0 to ROB_SIZE-1 loop
-      vfull := vfull and rob_buf(i).busy;
-    end loop;
-    full <= full;
-  end process;
+  full <= and busy_flag;
+  empty <= nor busy_flag;
 
   ---
   -- OUTPUT
   ---
-  o_disp_qr <= std_logic_vector(to_unsigned(wr_ptr, o_disp_qr'length));
+  o_disp_qr <= std_logic_vector(wr_ptr);
 
   o_full <= full;
+  o_empty <= empty;
 
   o_reg_commit <= commit;
-  o_reg_rd     <= rob_buf(rd_ptr).rd;
-  o_reg_result <= rob_buf(rd_ptr).result;
+  o_reg_rd     <= rob_buf(to_integer(rd_ptr)).rd;
+  o_reg_result <= rob_buf(to_integer(rd_ptr)).result;
 
   o_disp_rj <= disp_rs(1).rob_rdy;
   o_disp_vj <= disp_rs(1).rob_data;

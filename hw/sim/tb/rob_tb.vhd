@@ -232,9 +232,43 @@ begin
         i_disp_valid <= '0';
         i_disp_rob <= '0';
 
-        --TODO
+        i_wb_addr <= qr(1);
+        i_wb_result <= x"AABBCCDD";
+        i_wb_valid <= '1';
+        wait until rising_edge(i_clk);
 
+        i_wb_addr <= qr(2);
+        i_wb_result <= x"1A2B3C4D";
+        wait until rising_edge(i_clk);
 
+        i_wb_addr <= qr(3);
+        i_wb_result <= x"DEADBEEF";
+        wait until rising_edge(i_clk);
+
+        i_wb_valid <= '0';
+        i_disp_rs1 <= REG_X08;
+        i_disp_rs2 <= REG_X12;
+        wait until rising_edge(i_clk);
+
+        check(o_disp_rj = '1', "REGX08 should be ready");
+        check_equal(o_disp_vj, std_logic_vector'(x"AABBCCDD"));
+        check_equal(o_disp_qj, qr(1));
+
+        check(o_disp_rk = '1', "REGX12 should be ready");
+        check_equal(o_disp_vk, std_logic_vector'(x"1A2B3C4D"));
+        check_equal(o_disp_qk, qr(2));
+
+        i_disp_rs1 <= REG_X04;
+        i_disp_rs2 <= REG_X16;
+        wait until rising_edge(i_clk);
+
+        check(o_disp_rj = '0', "REGX04 should not be ready");
+        check_equal(o_disp_vj, std_logic_vector'(x"UUUUUUUU"));
+        check_equal(o_disp_qj, qr(0));
+
+        check(o_disp_rk = '1', "REGX16 should be ready");
+        check_equal(o_disp_vk, std_logic_vector'(x"DEADBEEF"));
+        check_equal(o_disp_qk, qr(3));
 
       elsif run("VQ1_empty_full") then
         i_disp_valid <= '1';
@@ -288,13 +322,48 @@ begin
         check(o_empty = '1', "Should be empty at end");
         check(o_full = '0', "should be full because empty at end");
 
-      elsif run("VQ1_simultaneous") then
-      elsif run("VQ1_typical") then
-      elsif run("VQ2_buffer_overrun") then
-      elsif run("VQ2_buffer_underrun") then
-      elsif run("VQ2_disp_invalid") then
+      elsif run("VQ1_foward_latest") then
+        i_disp_valid <= '1';
+        i_disp_rob <= '1';
+        i_disp_rd <= REG_X04;
+        wait until rising_edge(i_clk);
+        qr(0) <= o_disp_qr;
+        i_disp_rd <= REG_X04;
+        wait until rising_edge(i_clk);
+        qr(1) <= o_disp_qr;
+        i_disp_rd <= REG_X04;
+        wait until rising_edge(i_clk);
+        qr(2) <= o_disp_qr;
+        i_disp_rd <= REG_X04;
+        wait until rising_edge(i_clk);
+        qr(3) <= o_disp_qr;
+        i_disp_valid <= '0';
+        i_disp_rob <= '0';
 
+        i_wb_addr <= qr(1);
+        i_wb_result <= x"AABBCCDD";
+        i_wb_valid <= '1';
+        wait until rising_edge(i_clk);
 
+        i_wb_addr <= qr(3);
+        i_wb_result <= x"DDCCBBAA";
+        i_wb_valid <= '1';
+        wait until rising_edge(i_clk);
+
+        i_wb_valid <= '0';
+        i_disp_rs1 <= REG_X04;
+        wait until rising_edge(i_clk);
+
+        check(o_disp_rj = '1', "REGX04 should be ready");
+        check_equal(o_disp_vj, std_logic_vector'(x"DDCCBBAA"));
+        check_equal(o_disp_qj, qr(3));
+
+      --elsif run("VQ1_simultaneous") then
+      --elsif run("VQ1_typical") then
+      --elsif run("VQ2_foward_latest_not_rdy") then
+      --elsif run("VQ2_buffer_overrun") then
+      --elsif run("VQ2_buffer_underrun") then
+      --elsif run("VQ2_disp_invalid") then
       end if;
     end loop;
 

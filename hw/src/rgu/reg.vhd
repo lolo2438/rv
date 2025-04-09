@@ -10,29 +10,30 @@ entity reg is
     XLEN      : natural
   );
   port(
-    i_clk         : in  std_logic;                                  --! System clock
-    i_arst        : in  std_logic;                                  --! Asynchronous reset
-    i_srst        : in  std_logic;                                  --! Synchronous reset
+    -- CONTROL I/F
+    i_clk         : in  std_logic;                              --! System clock
+    i_arst        : in  std_logic;                              --! Asynchronous reset
+    i_srst        : in  std_logic;                              --! Synchronous reset
 
-    -- RJ interface
-    i_disp_rs1    : in  std_logic_vector(REG_LEN-1 downto 0);  --! Register address for OP J
+    -- RJ I/F
+    i_disp_rs1    : in  std_logic_vector(REG_LEN-1 downto 0);   --! Register address for OP J
     o_reg_vj      : out std_logic_vector(XLEN-1 downto 0);      --! Value of reg J
     o_reg_qj      : out std_logic_vector(ROB_LEN-1 downto 0);   --! Rob entry of reg J
     o_reg_rj      : out std_logic;                              --! Ready flag for reg J (data is available)
 
-    -- RK interface
-    i_disp_rs2    : in  std_logic_vector(REG_LEN-1 downto 0);  --! Register address for OP K
+    -- RK I/F
+    i_disp_rs2    : in  std_logic_vector(REG_LEN-1 downto 0);   --! Register address for OP K
     o_reg_vk      : out std_logic_vector(XLEN-1 downto 0);      --! Value of reg K
     o_reg_qk      : out std_logic_vector(ROB_LEN-1 downto 0);   --! Rob entry of reg K
     o_reg_rk      : out std_logic;                              --! Ready flag for reg K (Data is available)
 
-    --  I/F
+    -- DISPATCH I/F
     i_disp_valid  : in  std_logic;
     i_disp_wb     : in  std_logic;                              --! Result will be written back in registers
     i_disp_rd     : in  std_logic_vector(REG_LEN-1 downto 0);   --! Destination register to writeback
     i_disp_qr     : in  std_logic_vector(ROB_LEN-1 downto 0);   --! Rob address that holds the result
 
-    -- Write Back I/F
+    -- WRITEBACK I/F
     i_wb_we       : in  std_logic;                              --! Write Enable Register
     i_wb_rd       : in  std_logic_vector(REG_LEN-1 downto 0);   --! Write Register address
     i_wb_data     : in  std_logic_vector(XLEN-1 downto 0)       --! Result to write in wr

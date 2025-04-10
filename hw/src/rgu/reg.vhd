@@ -28,7 +28,6 @@ entity reg is
     o_reg_rk      : out std_logic;                              --! Ready flag for reg K (Data is available)
 
     -- DISPATCH I/F
-    i_disp_valid  : in  std_logic;
     i_disp_wb     : in  std_logic;                              --! Result will be written back in registers
     i_disp_rd     : in  std_logic_vector(REG_LEN-1 downto 0);   --! Destination register to writeback
     i_disp_qr     : in  std_logic_vector(ROB_LEN-1 downto 0);   --! Rob address that holds the result
@@ -36,6 +35,7 @@ entity reg is
     -- WRITEBACK I/F
     i_wb_we       : in  std_logic;                              --! Write Enable Register
     i_wb_rd       : in  std_logic_vector(REG_LEN-1 downto 0);   --! Write Register address
+    i_wb_qr       : in  std_logic_vector(ROB_LEN-1 downto 0);   --! The rob address of the incomming wb result
     i_wb_data     : in  std_logic_vector(XLEN-1 downto 0)       --! Result to write in wr
   );
 end entity;
@@ -50,7 +50,7 @@ architecture rtl of reg is
 
   type regfile_t is array (natural range <>) of reg_t;
 
-  signal x : regfile_t(0 to 2**XLEN-1);
+  signal x : regfile_t(0 to 2**REG_LEN-1);
 
   signal rs1 : unsigned(i_disp_rs1'range);
   signal rs2 : unsigned(i_disp_rs2'range);
@@ -68,31 +68,32 @@ begin
   ---
   p_reg:
   process(i_clk, i_arst)
+    variable reg_addr : natural;
   begin
     if i_arst = RST_LEVEL then
         for i in 1 to 2**REG_LEN-1 loop
-          x(i).src <= (others => '0');
           x(i).ready <= '0';
         end loop;
 
     elsif rising_edge(i_clk) then
       if i_srst = RST_LEVEL then
         for i in 1 to 2**REG_LEN-1 loop
-          x(i).src <= (others => '0');
           x(i).ready <= '0';
         end loop;
       else
         if i_wb_we = '1' then
-          x(to_integer(unsigned(i_wb_rd))).data  <= i_wb_data;
+          reg_addr := to_integer(unsigned(i_wb_rd));
+          x(reg_addr).data  <= i_wb_data;
 
-          if i_wb_rd = x(to_integer(unsigned(i_wb_rd))).src then
-            x(to_integer(unsigned(i_wb_rd))).ready <= '1';
+          if i_wb_qr = x(reg_addr).src then
+            x(reg_addr).ready <= '1';
           end if;
         end if;
 
-        if i_disp_wb = '1' and i_disp_valid = '1' then
-          x(to_integer(unsigned(i_disp_rd))).src <= i_disp_qr;
-          x(to_integer(unsigned(i_disp_rd))).ready <= '0';
+        if i_disp_wb = '1' then
+          reg_addr := to_integer(unsigned(i_disp_rd));
+          x(reg_addr).src <= i_disp_qr;
+          x(reg_addr).ready <= '0';
         end if;
       end if;
     end if;

@@ -8,14 +8,14 @@ library hw;
 use hw.tag_pkg.all;
 
 entity rgu is
-  generic(
+  generic (
     RST_LEVEL : std_logic := '0';
     ROB_LEN   : natural;
     REG_LEN   : natural;
     TAG_LEN   : natural;
     XLEN      : natural
   );
-  port(
+  port (
     i_clk         : in  std_logic;
     i_srst        : in  std_logic;
     i_arst        : in  std_logic;
@@ -47,8 +47,11 @@ end entity;
 
 architecture rtl of rgu is
 
+  signal disp_we      : std_logic;
+
   signal reg_wb       : std_logic;
-  signal rob_qr       : std_logic_vector(ROB_LEN-1 downto 0);
+  signal rob_disp_qr  : std_logic_vector(ROB_LEN-1 downto 0);
+  signal rob_wb_qr    : std_logic_vector(ROB_LEN-1 downto 0);
 
   signal reg_vj       : std_logic_vector(XLEN-1 downto 0);
   signal reg_qj       : std_logic_vector(ROB_LEN-1 downto 0);
@@ -65,6 +68,7 @@ architecture rtl of rgu is
   signal rob_vj       : std_logic_vector(XLEN-1 downto 0);
   signal rob_qj       : std_logic_vector(ROB_LEN-1 downto 0);
   signal rob_rj       : std_logic;
+
 
   signal rob_commit   : std_logic;
   signal rob_rd       : std_logic_vector(REG_LEN-1 downto 0);
@@ -95,6 +99,7 @@ begin
       end case;
   end process;
 
+  disp_we <= reg_wb and i_disp_valid;
 
   u_reg:
   entity hw.reg
@@ -116,12 +121,12 @@ begin
     o_reg_vk     => reg_vk,
     o_reg_qk     => reg_qk,
     o_reg_rk     => reg_rk,
-    i_disp_wb    => reg_wb,
-    i_disp_valid => i_disp_valid,
+    i_disp_wb    => disp_we,
     i_disp_rd    => i_disp_rd,
-    i_disp_qr    => rob_qr,
+    i_disp_qr    => rob_disp_qr,
     i_wb_we      => rob_commit,
     i_wb_rd      => rob_rd,
+    i_wb_qr      => rob_wb_qr,
     i_wb_data    => rob_result
   );
 
@@ -140,10 +145,9 @@ begin
     i_srst          => i_srst,
     i_flush         => '0',
     o_full          => rob_full,
-    i_disp_valid    => i_disp_valid,
-    i_disp_rob      => reg_wb,
+    i_disp_rob      => disp_we,
     i_disp_rd       => i_disp_rd,
-    o_disp_qr       => rob_qr,
+    o_disp_qr       => rob_disp_qr,
     i_disp_rs1      => i_disp_rs1,
     o_disp_vj       => rob_vj,
     o_disp_qj       => rob_qj,
@@ -154,6 +158,7 @@ begin
     o_disp_rk       => rob_rk,
     o_reg_commit    => rob_commit,
     o_reg_rd        => rob_rd,
+    o_reg_qr        => rob_wb_qr,
     o_reg_result    => rob_result,
     i_wb_addr       => i_cdbr_tq(ROB_LEN-1 downto 0),
     i_wb_result     => i_cdbr_vq,
@@ -171,9 +176,6 @@ begin
   --  1  |  1  |  0  |  CDB
   --  1  |  1  |  1  |  REG
   -- REG > CDB > ROB
-  --
-  --
-  --
   --
 
 
@@ -193,13 +195,12 @@ begin
   tk <= TAG_RGU & reg_qk;
   rk <= reg_rk or cdb_rk or rob_rk;
 
-
   ---
   -- OUTPUT
   ---
   o_rob_full <= rob_full;
 
-  o_disp_tq <= TAG_RGU & rob_qr;
+  o_disp_tq <= TAG_RGU & rob_disp_qr;
 
   o_data_vj <= vj;
   o_data_tj <= tj;

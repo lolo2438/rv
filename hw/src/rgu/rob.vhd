@@ -27,7 +27,6 @@ entity rob is
     o_empty         : out std_logic;                            --! Rob is empty
 
     -- Dispatch I/F
-    i_disp_valid    : in std_logic;
     i_disp_rob      : in std_logic;                             --! Create an entry in the ROB
     i_disp_rd       : in std_logic_vector(REG_LEN-1 downto 0);  --! Destination register of the result
     o_disp_qr       : out std_logic_vector(ROB_LEN-1 downto 0); --! Rob address to write back the result
@@ -45,6 +44,7 @@ entity rob is
     -- REG I/F
     o_reg_commit    : out std_logic;                            --! Rob is commiting a value that is ready and clearing it's entry
     o_reg_rd        : out std_logic_vector(REG_LEN-1 downto 0); --! Register Destination address
+    o_reg_qr        : out std_logic_vector(ROB_LEN-1 downto 0); --! The rob address that contained the result
     o_reg_result    : out std_logic_vector(XLEN-1 downto 0);    --! Result to write to register
 
     -- WB I/F
@@ -92,7 +92,7 @@ architecture rtl of rob is
 
 begin
 
-  disp <= i_disp_rob and i_disp_valid;
+  disp <= i_disp_rob;
   ---
   -- DATAPATH
   ---
@@ -223,6 +223,7 @@ begin
   o_empty <= empty;
 
   o_reg_commit <= commit;
+  o_reg_qr     <= std_logic_vector(rd_ptr);
   o_reg_rd     <= rob_buf(to_integer(rd_ptr)).rd;
   o_reg_result <= rob_buf(to_integer(rd_ptr)).result;
 

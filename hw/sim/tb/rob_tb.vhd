@@ -38,7 +38,6 @@ architecture tb of rob_tb is
  signal  o_full          : std_logic;
  signal  o_empty         : std_logic;
 
- signal  i_disp_valid    : std_logic := '0';
  signal  i_disp_rob      : std_logic := '0';
  signal  i_disp_rd       : std_logic_vector(REG_LEN-1 downto 0) := (others => '0');
  signal  o_disp_qr       : std_logic_vector(ROB_LEN-1 downto 0);
@@ -55,6 +54,7 @@ architecture tb of rob_tb is
 
  signal  o_reg_commit    : std_logic;
  signal  o_reg_rd        : std_logic_vector(REG_LEN-1 downto 0);
+ signal  o_reg_qr        : std_logic_vector(ROB_LEN-1 downto 0);
  signal  o_reg_result    : std_logic_vector(XLEN-1 downto 0);
 
  signal  i_wb_addr       : std_logic_vector(ROB_LEN-1 downto 0) := (others => '0');
@@ -89,13 +89,11 @@ begin
 
       if run("VQ0_single_op") then
 
-        i_disp_valid <= '1';
         i_disp_rob <= '1';
         i_disp_rd <= REG_X10;
         wait until rising_edge(i_clk);
         qr(0) <= o_disp_qr;
 
-        i_disp_valid <= '0';
         i_disp_rob <= '0';
         i_disp_rd <= (others => '0');
 
@@ -111,10 +109,10 @@ begin
 
         check_equal(o_reg_commit, '1');
         check_equal(o_reg_rd, REG_X10);
+        check_equal(o_reg_qr, qr(0));
         check_equal(o_reg_result, std_logic_vector'(x"DEADBEEF"));
 
       elsif run("VQ0_multi_write_read_in_order") then
-        i_disp_valid <= '1';
         i_disp_rob <= '1';
         i_disp_rd <= REG_X10;
         wait until rising_edge(i_clk);
@@ -128,7 +126,6 @@ begin
         wait until rising_edge(i_clk);
 
         qr(2) <= o_disp_qr;
-        i_disp_valid  <= '0';
         i_disp_rob    <= '0';
         i_disp_rd     <= (others => '0');
 
@@ -146,6 +143,7 @@ begin
 
         check_equal(o_reg_commit, '1');
         check_equal(o_reg_rd, REG_X10);
+        check_equal(o_reg_qr, qr(0));
         check_equal(o_reg_result, std_logic_vector'(x"1A2B3C4D"));
         wait until rising_edge(i_clk);
 
@@ -155,15 +153,16 @@ begin
 
         check_equal(o_reg_commit, '1');
         check_equal(o_reg_rd, REG_X15);
+        check_equal(o_reg_qr, qr(1));
         check_equal(o_reg_result, std_logic_vector'(x"4D3C2B1A"));
         wait until rising_edge(i_clk);
 
         check_equal(o_reg_commit, '1');
         check_equal(o_reg_rd, REG_X20);
+        check_equal(o_reg_qr, qr(2));
         check_equal(o_reg_result, std_logic_vector'(x"AABBCCDD"));
 
       elsif run("VQ0_multi_write_read_ooo") then
-        i_disp_valid <= '1';
         i_disp_rob <= '1';
         i_disp_rd <= REG_X04;
         wait until rising_edge(i_clk);
@@ -177,7 +176,6 @@ begin
         wait until rising_edge(i_clk);
 
         qr(2) <= o_disp_qr;
-        i_disp_valid  <= '0';
         i_disp_rob    <= '0';
         i_disp_rd     <= (others => '0');
 
@@ -202,20 +200,22 @@ begin
 
         check_equal(o_reg_commit, '1');
         check_equal(o_reg_rd, REG_X04);
+        check_equal(o_reg_qr, qr(0));
         check_equal(o_reg_result, std_logic_vector'(x"DDCCBBAA"));
         wait until rising_edge(i_clk);
 
         check_equal(o_reg_commit, '1');
         check_equal(o_reg_rd, REG_X08);
+        check_equal(o_reg_qr, qr(1));
         check_equal(o_reg_result, std_logic_vector'(x"CAFEDECA"));
         wait until rising_edge(i_clk);
 
         check_equal(o_reg_commit, '1');
         check_equal(o_reg_rd, REG_X12);
+        check_equal(o_reg_qr, qr(2));
         check_equal(o_reg_result, std_logic_vector'(x"D4C3B2A1"));
 
       elsif run("VQ0_foward") then
-        i_disp_valid <= '1';
         i_disp_rob <= '1';
         i_disp_rd <= REG_X04;
         wait until rising_edge(i_clk);
@@ -229,7 +229,6 @@ begin
         i_disp_rd <= REG_X16;
         wait until rising_edge(i_clk);
         qr(3) <= o_disp_qr;
-        i_disp_valid <= '0';
         i_disp_rob <= '0';
 
         i_wb_addr <= qr(1);
@@ -271,7 +270,6 @@ begin
         check_equal(o_disp_qk, qr(3));
 
       elsif run("VQ1_empty_full") then
-        i_disp_valid <= '1';
         i_disp_rob <= '1';
         i_disp_rd <= REG_X04;
         wait until rising_edge(i_clk);
@@ -296,7 +294,6 @@ begin
         check(o_full = '0', "should be full because writing the 3rd data");
         qr(3) <= o_disp_qr;
 
-        i_disp_valid <= '0';
         i_disp_rob <= '0';
         i_wb_addr <= qr(1);
         wait until rising_edge(i_clk);
@@ -323,7 +320,6 @@ begin
         check(o_full = '0', "should be full because empty at end");
 
       elsif run("VQ1_foward_latest") then
-        i_disp_valid <= '1';
         i_disp_rob <= '1';
         i_disp_rd <= REG_X04;
         wait until rising_edge(i_clk);
@@ -337,7 +333,6 @@ begin
         i_disp_rd <= REG_X04;
         wait until rising_edge(i_clk);
         qr(3) <= o_disp_qr;
-        i_disp_valid <= '0';
         i_disp_rob <= '0';
 
         i_wb_addr <= qr(1);
@@ -363,7 +358,6 @@ begin
       --elsif run("VQ2_foward_latest_not_rdy") then
       --elsif run("VQ2_buffer_overrun") then
       --elsif run("VQ2_buffer_underrun") then
-      --elsif run("VQ2_disp_invalid") then
       end if;
     end loop;
 
@@ -385,7 +379,6 @@ begin
     i_flush         => i_flush,
     o_full          => o_full,
     o_empty         => o_empty,
-    i_disp_valid    => i_disp_valid,
     i_disp_rob      => i_disp_rob,
     i_disp_rd       => i_disp_rd,
     o_disp_qr       => o_disp_qr,
@@ -399,6 +392,7 @@ begin
     o_disp_rk       => o_disp_rk,
     o_reg_commit    => o_reg_commit,
     o_reg_rd        => o_reg_rd,
+    o_reg_qr        => o_reg_qr,
     o_reg_result    => o_reg_result,
     i_wb_addr       => i_wb_addr,
     i_wb_result     => i_wb_result,

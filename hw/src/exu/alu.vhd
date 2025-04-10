@@ -53,8 +53,8 @@ begin
   -- TODO: If OP32(RV64) or OP64(RV128)
   -- Sign extend from bit 32 (RV64) or bit 64(RV128)
   add <= std_logic_vector(c_add(XLEN-1 downto 0));
-  slt <= (0 => add(XLEN-1), others => '0');
-  sltu <= (0 => add(XLEN), others => '0');
+  slt <= (0 => c_add(XLEN), others => '0');
+  sltu <= (0 => c_add(XLEN), others => '0');
   with i_f3 select
     c <= add        when FUNCT3_ADDSUB,
          sl         when FUNCT3_SL,

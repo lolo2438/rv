@@ -19,42 +19,42 @@ entity exb is
     XLEN      : natural           -- Bit width of the operands
   );
   port(
-    -- Control ports
-    i_clk       : in  std_logic;
-    i_arst      : in  std_logic;
-    i_srst      : in  std_logic;
-    o_full      : out std_logic;
-    o_empty     : out std_logic;
+    -- CONTROL I/F
+    i_clk       : in  std_logic;                              --! Input clock
+    i_arst      : in  std_logic;                              --! Asynchronous reset
+    i_srst      : in  std_logic;                              --! Synchronous reset
+    o_full      : out std_logic;                              --! Full flag
+    o_empty     : out std_logic;                              --! Empty flag
 
-    -- Dispatch bus interface
-    i_disp_we   : in std_logic;                              --! Dispatch write enable
-    i_disp_op   : in std_logic_vector(4 downto 0);
-    i_disp_f3   : in std_logic_vector(2 downto 0);           --! Dispatch F3
-    i_disp_f7   : in std_logic_vector(6 downto 0);           --! Dispatch F7
+    -- DISPATCH I/F
+    i_disp_we   : in  std_logic;                              --! Dispatch write enable
+    i_disp_op   : in  std_logic_vector(4 downto 0);
+    i_disp_f3   : in  std_logic_vector(2 downto 0);           --! Dispatch F3
+    i_disp_f7   : in  std_logic_vector(6 downto 0);           --! Dispatch F7
 
-    i_disp_vj   : in std_logic_vector(XLEN-1 downto 0);      --! Dispatch J operand value
-    i_disp_tj   : in std_logic_vector(TAG_LEN-1 downto 0);   --! Dispatch J operand tag
-    i_disp_rj   : in std_logic;                              --! Dispatch J operand readyness
+    i_disp_vj   : in  std_logic_vector(XLEN-1 downto 0);      --! Dispatch J operand value
+    i_disp_tj   : in  std_logic_vector(TAG_LEN-1 downto 0);   --! Dispatch J operand tag
+    i_disp_rj   : in  std_logic;                              --! Dispatch J operand readyness
 
-    i_disp_vk   : in std_logic_vector(XLEN-1 downto 0);      --! Disparch k operand value
-    i_disp_tk   : in std_logic_vector(TAG_LEN-1 downto 0);   --! Dispatch k operand tag
-    i_disp_rk   : in std_logic;                              --! Dispatch k operand readyness
+    i_disp_vk   : in  std_logic_vector(XLEN-1 downto 0);      --! Disparch k operand value
+    i_disp_tk   : in  std_logic_vector(TAG_LEN-1 downto 0);   --! Dispatch k operand tag
+    i_disp_rk   : in  std_logic;                              --! Dispatch k operand readyness
 
-    i_disp_tq   : in std_logic_vector(TAG_LEN-1 downto 0);   --! Dispatch destination tag
+    i_disp_tq   : in  std_logic_vector(TAG_LEN-1 downto 0);   --! Dispatch destination tag
 
-    -- Issue bus interface
-    i_issue_rdy : in  std_logic;
-    o_issue_vj  : out std_logic_vector(XLEN-1 downto 0);
-    o_issue_vk  : out std_logic_vector(XLEN-1 downto 0);
-    o_issue_f3  : out std_logic_vector(2 downto 0);
-    o_issue_f7  : out std_logic_vector(6 downto 0);
-    o_issue_tq  : out std_logic_vector(TAG_LEN-1 downto 0);
-    o_issue_we  : out std_logic;
+    -- ISSUE I/F
+    i_issue_rdy : in  std_logic;                              --!
+    o_issue_vj  : out std_logic_vector(XLEN-1 downto 0);      --!
+    o_issue_vk  : out std_logic_vector(XLEN-1 downto 0);      --!
+    o_issue_f3  : out std_logic_vector(2 downto 0);           --!
+    o_issue_f7  : out std_logic_vector(6 downto 0);           --!
+    o_issue_tq  : out std_logic_vector(TAG_LEN-1 downto 0);   --!
+    o_issue_we  : out std_logic;                              --!
 
-    -- CDB Foward interface
-    i_cdbr_rq   : in std_logic;
-    i_cdbr_tq   : in std_logic_vector(TAG_LEN-1 downto 0);
-    i_cdbr_vq   : in std_logic_vector(XLEN-1 downto 0)
+    -- CDBR I/F
+    i_cdbr_rq   : in std_logic;                               --!
+    i_cdbr_tq   : in std_logic_vector(TAG_LEN-1 downto 0);    --!
+    i_cdbr_vq   : in std_logic_vector(XLEN-1 downto 0)        --!
   );
 end entity;
 

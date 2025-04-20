@@ -11,8 +11,8 @@ use riscv.RV32I.all;
 entity lsu is
   generic (
     RST_LEVEL : std_logic := '0';   --! Reset level
-    STB_LEN   : natural;            --! STB_SIZE = 2**STB_LEN
-    LDB_LEN   : natural;            --! LDB_SIZE = 2**LDB_LEN
+    STU_LEN   : natural;            --! STU_SIZE = 2**STU_LEN
+    LDU_LEN   : natural;            --! LDU_SIZE = 2**LDU_LEN
     TAG_LEN   : natural;            --! Tag length
     XLEN      : natural             --! Operand size
   );
@@ -22,8 +22,12 @@ entity lsu is
     i_arst          : in  std_logic;                              --! Async Reset
     i_srst          : in  std_logic;                              --! Sync Reset
 
-    o_stb_full      : out std_logic;                              --! Store buffer is full when '1'
-    o_ldb_full      : out std_logic;                              --! Load buffer is full when '1'
+    o_stu_empty     : out std_logic;                              --! Store buffer is empty when '1'
+    o_stu_full      : out std_logic;                              --! Store buffer is full when '1'
+
+    o_ldu_empty     : out std_logic;                              --! Load buffer is empty when '1'
+    o_ldu_full      : out std_logic;                              --! Load buffer is full when '1'
+
     o_grp_full      : out std_logic;                              --! Group tracking for Fence operation is full when '1'
 
     -- DISP I/F
@@ -37,8 +41,6 @@ entity lsu is
     i_disp_vd       : in  std_logic_vector(XLEN-1 downto 0);      --! Data field value for Store
     i_disp_td       : in  std_logic_vector(TAG_LEN-1 downto 0);   --! Data tag to look for if it's not ready
     i_disp_rd       : in  std_logic;                              --! Data ready flag
-    o_disp_stu_qr   : out std_logic_vector(STB_LEN-1 downto 0);   --! STB Entry that the address should be fowarded
-    o_disp_ldu_qr   : out std_logic_vector(LDB_LEN-1 downto 0);   --! LDB Entry that the address should be fowarded
 
     -- CDB WR I/F
     o_cdbw_vq       : out std_logic_vector(XLEN-1 downto 0);      --! Data to write on the bus
@@ -63,9 +65,9 @@ entity lsu is
     o_mem_rd_re     : out std_logic;                              --! Read enable to memory
     i_mem_rd_rdy    : in  std_logic;                              --! Memory is ready to issue a read
     o_mem_rd_addr   : out std_logic_vector(XLEN-1 downto 0);      --! Memory read address
-    o_mem_rd_ptr    : out std_logic_vector(LDB_LEN-1 downto 0);   --! LDB address that the load should be stored at
+    o_mem_rd_ptr    : out std_logic_vector(LDU_LEN-1 downto 0);   --! LDU address that the load should be stored at
     i_mem_rd_data   : in  std_logic_vector(XLEN-1 downto 0);      --! Read data from memory
-    i_mem_rd_ptr    : in  std_logic_vector(LDB_LEN-1 downto 0);   --! LDB address that the read data will be store at
+    i_mem_rd_ptr    : in  std_logic_vector(LDU_LEN-1 downto 0);   --! LDU address that the read data will be store at
     i_mem_rd_valid  : in  std_logic                               --! Read data is valid
   );
 end entity;
@@ -78,39 +80,36 @@ architecture rtl of lsu is
   -- GRP
   ---
   signal grp_disp_fence   : std_logic;
-  signal grp_full         : std_logic;
   signal wr_grp           : std_logic_vector(GRP_LEN-1 downto 0);
   signal rd_grp           : std_logic_vector(GRP_LEN-1 downto 0);
 
   ---
-  -- STB
+  -- STU
   ---
-  signal stb_full         : std_logic;
-  signal stb_disp_store   : std_logic;
-  signal stb_rd_grp_match : std_logic;
-  signal stb_deps         : std_logic_vector(2**STB_LEN-1 downto 0);
-  signal stb_raddr        : std_logic_vector(STB_LEN-1 downto 0);
-  signal stb_issue_rdy    : std_logic;
-  signal stb_issue_valid  : std_logic;
-  signal stb_issue_f3     : std_logic_vector(2 downto 0);
-  signal stb_issue_addr   : std_logic_vector(XLEN-1 downto 0);
-  signal stb_issue_data   : std_logic_vector(XLEN-1 downto 0);
-  signal stb_issue        : std_logic;
+  signal stu_disp_store   : std_logic;
+  signal stu_rd_grp_match : std_logic;
+  signal stu_deps         : std_logic_vector(2**STU_LEN-1 downto 0);
+  signal stu_raddr        : std_logic_vector(STU_LEN-1 downto 0);
+  signal stu_issue_rdy    : std_logic;
+  signal stu_issue_valid  : std_logic;
+  signal stu_issue_f3     : std_logic_vector(2 downto 0);
+  signal stu_issue_addr   : std_logic_vector(XLEN-1 downto 0);
+  signal stu_issue_data   : std_logic_vector(XLEN-1 downto 0);
+  signal stu_issue        : std_logic;
 
 
   ---
-  -- LDB
+  -- LDU
   ---
-  signal ldb_disp_load    : std_logic;
-  signal ldb_issue_rdy    : std_logic;
-  signal ldb_issue_valid  : std_logic;
-  signal ldb_issue_addr   : std_logic_vector(XLEN-1 downto 0);
-  signal ldb_issue_ptr    : std_logic_vector(LDB_LEN-1 downto 0);
-  signal ldb_wb_valid     : std_logic;
-  signal ldb_wb_ptr       : std_logic_vector(LDB_LEN-1 downto 0);
-  signal ldb_wb_data      : std_logic_vector(XLEN-1 downto 0);
-  signal ldb_rd_grp_match : std_logic;
-  signal ldb_full         : std_logic;
+  signal ldu_disp_load    : std_logic;
+  signal ldu_issue_rdy    : std_logic;
+  signal ldu_issue_valid  : std_logic;
+  signal ldu_issue_addr   : std_logic_vector(XLEN-1 downto 0);
+  signal ldu_issue_ptr    : std_logic_vector(LDU_LEN-1 downto 0);
+  signal ldu_wb_valid     : std_logic;
+  signal ldu_wb_ptr       : std_logic_vector(LDU_LEN-1 downto 0);
+  signal ldu_wb_data      : std_logic_vector(XLEN-1 downto 0);
+  signal ldu_rd_grp_match : std_logic;
 
   ---
   -- MEM
@@ -122,14 +121,14 @@ begin
   ---
   -- INPUT
   ---
-  ldb_issue_rdy <= i_mem_rd_rdy;
-  ldb_wb_data   <= i_mem_rd_data;
-  ldb_wb_valid  <= i_mem_rd_valid;
-  ldb_wb_ptr    <= i_mem_rd_ptr;
+  ldu_issue_rdy <= i_mem_rd_rdy;
+  ldu_wb_data   <= i_mem_rd_data;
+  ldu_wb_valid  <= i_mem_rd_valid;
+  ldu_wb_ptr    <= i_mem_rd_ptr;
 
-  grp_disp_fence <= '1' when i_disp_op = OP_MISC_MEM and i_disp_f3 = FUNCT3_FENCE else '0';
-  ldb_disp_load <= '1' when i_disp_op = OP_LOAD else '0';
-  stb_disp_store <= '1' when i_disp_op = OP_STORE else '0';
+  grp_disp_fence  <= i_disp_valid when i_disp_op = OP_MISC_MEM and i_disp_f3 = FUNCT3_FENCE else '0';
+  ldu_disp_load   <= i_disp_valid when i_disp_op = OP_LOAD else '0';
+  stu_disp_store  <= i_disp_valid when i_disp_op = OP_STORE else '0';
 
 
   ---
@@ -145,21 +144,20 @@ begin
     i_clk               => i_clk,
     i_arst              => i_arst,
     i_srst              => i_srst,
-    o_full              => grp_full,
-    i_disp_valid        => i_disp_valid,
+    o_full              => o_grp_full,
     i_disp_fence        => grp_disp_fence,
-    i_stb_rd_grp_match  => stb_rd_grp_match,
-    i_ldb_rd_grp_match  => ldb_rd_grp_match,
+    i_stu_rd_grp_match  => stu_rd_grp_match,
+    i_ldu_rd_grp_match  => ldu_rd_grp_match,
     o_wr_grp            => wr_grp,
     o_rd_grp            => rd_grp
   );
 
 
-  u_stb:
-  entity hw.stb
+  u_stu:
+  entity hw.stu
   generic map(
     RST_LEVEL => RST_LEVEL,
-    STB_LEN   => STB_LEN,
+    STU_LEN   => STU_LEN,
     GRP_LEN   => GRP_LEN,
     TAG_LEN   => TAG_LEN,
     XLEN      => XLEN
@@ -168,9 +166,9 @@ begin
     i_clk           => i_clk,
     i_arst          => i_arst,
     i_srst          => i_srst,
-    o_full          => stb_full,
-    i_disp_valid    => i_disp_valid,
-    i_disp_store    => stb_disp_store,
+    o_empty         => o_stu_empty,
+    o_full          => o_stu_full,
+    i_disp_store    => stu_disp_store,
     i_disp_f3       => i_disp_f3,
     i_disp_va       => i_disp_va,
     i_disp_ta       => i_disp_ta,
@@ -178,31 +176,30 @@ begin
     i_disp_vd       => i_disp_vd,
     i_disp_td       => i_disp_td,
     i_disp_rd       => i_disp_rd,
-    o_disp_qr       => o_disp_stu_qr,
     i_wr_grp        => wr_grp,
     i_rd_grp        => rd_grp,
-    o_rd_grp_match  => stb_rd_grp_match,
+    o_rd_grp_match  => stu_rd_grp_match,
     i_cdbr_vq       => i_cdbr_vq,
     i_cdbr_tq       => i_cdbr_tq,
     i_cdbr_rq       => i_cdbr_rq,
-    o_stb_dep       => stb_deps,
-    o_stb_addr      => stb_raddr,
-    i_issue_rdy     => stb_issue_rdy,
-    o_issue_valid   => stb_issue_valid,
-    o_issue_f3      => stb_issue_f3,
-    o_issue_addr    => stb_issue_addr,
-    o_issue_data    => stb_issue_data
+    o_stu_dep       => stu_deps,
+    o_stu_addr      => stu_raddr,
+    i_issue_rdy     => stu_issue_rdy,
+    o_issue_valid   => stu_issue_valid,
+    o_issue_f3      => stu_issue_f3,
+    o_issue_addr    => stu_issue_addr,
+    o_issue_data    => stu_issue_data
   );
 
-  stb_issue <= (stb_issue_rdy and stb_issue_valid);
+  stu_issue <= (stu_issue_rdy and stu_issue_valid);
 
-  u_ldb:
-  entity work.ldb
+  u_ldu:
+  entity work.ldu
   generic map(
     RST_LEVEL => RST_LEVEL,
-    LDB_LEN   => LDB_LEN,
+    LDU_LEN   => LDU_LEN,
     GRP_LEN   => GRP_LEN,
-    STB_LEN   => STB_LEN,
+    STU_LEN   => STU_LEN,
     TAG_LEN   => TAG_LEN,
     XLEN      => XLEN
   )
@@ -210,32 +207,31 @@ begin
     i_clk           => i_clk,
     i_arst          => i_arst,
     i_srst          => i_srst,
-    o_full          => ldb_full,
-    i_disp_valid    => i_disp_valid,
-    i_disp_load     => ldb_disp_load,
+    o_empty         => o_ldu_empty,
+    o_full          => o_ldu_full,
+    i_disp_load     => ldu_disp_load,
     i_disp_f3       => i_disp_f3,
     i_disp_tq       => i_disp_tq,
     i_disp_va       => i_disp_va,
     i_disp_ta       => i_disp_ta,
     i_disp_ra       => i_disp_ra,
-    o_disp_qr       => o_disp_ldu_qr,
     i_cdbr_vq       => i_cdbr_vq,
     i_cdbr_tq       => i_cdbr_tq,
     i_cdbr_rq       => i_cdbr_rq,
     i_wr_grp        => wr_grp,
     i_rd_grp        => rd_grp,
-    o_rd_grp_match  => ldb_rd_grp_match,
-    i_stb_issue     => stb_issue,
-    i_stb_addr      => stb_issue_addr,
-    i_stb_data      => stb_issue_data,
-    i_stb_dep       => stb_deps,
-    i_issue_rdy     => ldb_issue_rdy,
-    o_issue_valid   => ldb_issue_valid,
-    o_issue_addr    => ldb_issue_addr,
-    o_issue_ldb_ptr => ldb_issue_ptr,
-    i_wb_valid      => ldb_wb_valid,
-    i_wb_ldb_ptr    => ldb_wb_ptr,
-    i_wb_data       => ldb_wb_data,
+    o_rd_grp_match  => ldu_rd_grp_match,
+    i_stu_issue     => stu_issue,
+    i_stu_addr      => stu_issue_addr,
+    i_stu_data      => stu_issue_data,
+    i_stu_dep       => stu_deps,
+    i_issue_rdy     => ldu_issue_rdy,
+    o_issue_valid   => ldu_issue_valid,
+    o_issue_addr    => ldu_issue_addr,
+    o_issue_ldu_ptr => ldu_issue_ptr,
+    i_wb_valid      => ldu_wb_valid,
+    i_wb_ldu_ptr    => ldu_wb_ptr,
+    i_wb_data       => ldu_wb_data,
     o_cdbw_vq       => o_cdbw_vq,
     o_cdbw_tq       => o_cdbw_tq,
     o_cdbw_req      => o_cdbw_req,
@@ -254,19 +250,15 @@ begin
 
   -- OUTPUT
   ---
-  o_mem_wr_valid <= stb_issue_valid;
-  stb_issue_rdy  <= i_mem_wr_rdy;
-  o_mem_wr_addr  <= stb_issue_addr;
-  o_mem_wr_data  <= stb_issue_data;
+  o_mem_wr_valid <= stu_issue_valid;
+  stu_issue_rdy  <= i_mem_wr_rdy;
+  o_mem_wr_addr  <= stu_issue_addr;
+  o_mem_wr_data  <= stu_issue_data;
   o_mem_wr_we    <= store_byten;
 
-  o_mem_rd_re    <= ldb_issue_valid;
-  o_mem_rd_addr  <= ldb_issue_addr;
-  o_mem_rd_ptr   <= ldb_issue_ptr;
-
-  o_stb_full     <= stb_full;
-  o_ldb_full     <= ldb_full;
-  o_grp_full     <= grp_full;
+  o_mem_rd_re    <= ldu_issue_valid;
+  o_mem_rd_addr  <= ldu_issue_addr;
+  o_mem_rd_ptr   <= ldu_issue_ptr;
 
 
 end architecture;

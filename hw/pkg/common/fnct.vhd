@@ -32,7 +32,7 @@ package fnct is
   --! \param input an input vector containing the bits to be reversed
   --! \return The reversed vector
   --! \brief Reverses the vector : b"0100" -> b"0010"
-  pure function bit_reverse(val : std_logic_vector) return std_logic_vector;
+  pure function bit_reverse(input : std_logic_vector) return std_logic_vector;
 
   --! \param[in] file_name The file
   --! \param[out] mem The memory to initialize
@@ -129,13 +129,18 @@ package body fnct is
   end function;
 
 
-  pure function bit_reverse(val : std_logic_vector) return std_logic_vector is
-    variable out_val : std_logic_vector(val'length-1 downto 0);
+  pure function bit_reverse(input : std_logic_vector) return std_logic_vector is
+    variable output : std_logic_vector(input'length-1 downto 0);
   begin
-    for i in val'range loop
-      out_val(i) := val(out_val'length-1-i);
-    end loop;
-    return out_val;
+      for i in 0 to input'length-1 loop
+        if input'ascending then
+          output(i) := input(i);
+        else
+          output(i) := input(input'length-1-i);
+        end if;
+      end loop;
+
+    return output;
   end function;
 
 end package body;

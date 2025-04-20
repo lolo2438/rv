@@ -3,21 +3,21 @@ use ieee.std_logic_1164.all;
 
 package tag_pkg is
 
-  constant TAG_BITS   : natural := 2;
+  constant TAG_BITS    : natural := 2;
 
   constant TAG_RGU    : std_logic_vector(1 downto 0) := "00";
   constant TAG_LDU    : std_logic_vector(1 downto 0) := "01";
   constant TAG_STU    : std_logic_vector(1 downto 0) := "10";
   constant TAG_BRU    : std_logic_vector(1 downto 0) := "11";
 
-  constant STB_LEN : natural := 5;
-  constant LDB_LEN : natural := 5;
+  constant STU_LEN : natural := 5;
+  constant LDU_LEN : natural := 5;
   constant REG_LEN : natural := 5;
   constant ROB_LEN : natural := 5;
   constant EXB_LEN : natural := 5;
   constant BRU_LEN : natural := 3;
 
-  constant MAX_UNIT_LEN : natural := MAXIMUM((ROB_LEN, EXB_LEN, REG_LEN, LDB_LEN, STB_LEN));
+  constant MAX_UNIT_LEN : natural := MAXIMUM((ROB_LEN, EXB_LEN, REG_LEN, LDU_LEN, STU_LEN));
 
   constant TAG_LEN : natural := TAG_BITS + MAX_UNIT_LEN;
 
@@ -84,9 +84,9 @@ package body tag_pkg is
       when TAG_RGU =>
         return tag(ROB_LEN-1 downto 0);
       when TAG_LDU =>
-        return tag(LDB_LEN-1 downto 0);
+        return tag(LDU_LEN-1 downto 0);
       when TAG_STU =>
-        return tag(STB_LEN-1 downto 0);
+        return tag(STU_LEN-1 downto 0);
       when TAG_BRU =>
         return tag(BRU_LEN-1 downto 0);
       when others =>

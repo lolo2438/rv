@@ -6,7 +6,6 @@ library riscv;
 use riscv.RV32I.all;
 
 library hw;
-use hw.tag_pkg.all;
 
 library sim;
 use sim.tb_pkg.clk_gen;
@@ -24,6 +23,7 @@ architecture tb of alu_tb is
   -- DUT CONSTANTS
   ---
   constant XLEN    : natural := 32;
+  constant TAG_LEN : natural := 2;
 
   ---
   -- DUT SIGNALS
@@ -210,15 +210,15 @@ begin
         check_equal(o_done, '0', "t=clk2: not a valid compute ");
 
       elsif run("tag") then
-        i_tq <= TAG_RGU;
+        i_tq <= "10";
         check_equal(o_tq, std_logic_vector'("00"));
         wait until rising_edge(i_clk);
-        i_tq <= TAG_BRU;
+        i_tq <= "01";
         check_equal(o_tq, std_logic_vector'("00"));
         wait until rising_edge(i_clk);
-        check_equal(o_tq, std_logic_vector'(TAG_RGU));
+        check_equal(o_tq, std_logic_vector'("10"));
         wait until rising_edge(i_clk);
-        check_equal(o_tq, std_logic_vector'(TAG_BRU));
+        check_equal(o_tq, std_logic_vector'("01"));
       end if;
     end loop;
 

@@ -43,11 +43,11 @@ begin
 
   c_add <= resize(unsigned(a), c_add'length) + unsigned(b) + unsigned'("" & csub);
 
-  sl   <= std_logic_vector(shift_left(unsigned(i_a), to_integer(unsigned(i_b))));
+  sl   <= std_logic_vector(shift_left(unsigned(i_a), to_integer(unsigned(i_b(4 downto 0)))));
 
   csra <= '1' when (i_f3 = FUNCT3_SR and i_f7 = FUNCT7_SRA) else '0';
-  sr   <= std_logic_vector(shift_right(signed(i_a), to_integer(unsigned(i_b)))) when csra = '1' else
-          std_logic_vector(shift_right(unsigned(i_a), to_integer(unsigned(i_b))));
+  sr   <= std_logic_vector(shift_right(signed(i_a), to_integer(unsigned(i_b(4 downto 0))))) when csra = '1' else
+          std_logic_vector(shift_right(unsigned(i_a), to_integer(unsigned(i_b(4 downto 0)))));
 
 
   -- TODO: If OP32(RV64) or OP64(RV128)

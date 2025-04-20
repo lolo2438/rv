@@ -59,6 +59,11 @@ architecture rtl of core is
   signal inst                 : std_logic_vector(31 downto 0);
   signal inst_valid           : std_logic;
 
+
+  ---
+  -- DISP
+  ---
+
   signal disp_op              : std_logic_vector(4 downto 0);
   signal disp_f3              : std_logic_vector(2 downto 0);
   signal disp_f7              : std_logic_vector(6 downto 0);
@@ -70,10 +75,20 @@ architecture rtl of core is
   signal disp_illegal         : std_logic;
   signal disp_valid           : std_logic;
 
+
+  ---
+  -- SYS
+  ---
+
   signal sys_full             : std_logic;
   signal sys_empty            : std_logic;
   signal sys_stall            : std_logic;
   signal sys_halt             : std_logic;
+
+
+  ---
+  -- EXU
+  ---
 
   signal exu_vj_src           : std_logic;
   signal exu_vk_src           : std_logic;
@@ -85,6 +100,14 @@ architecture rtl of core is
   signal exu_rk               : std_logic;
   signal exu_tq               : std_logic_vector(TAG_LEN-1 downto 0);
 
+  signal exb_empty            : std_logic;
+  signal exb_full             : std_logic;
+
+
+  ---
+  -- LSU
+  ---
+
   signal lsu_va               : std_logic_vector(XLEN-1 downto 0);
   signal lsu_ta               : std_logic_vector(TAG_LEN-1 downto 0);
   signal lsu_ra               : std_logic;
@@ -92,8 +115,25 @@ architecture rtl of core is
   signal lsu_td               : std_logic_vector(TAG_LEN-1 downto 0);
   signal lsu_rd               : std_logic;
 
-  signal ldu_qr               : std_logic_vector(LDB_LEN-1 downto 0);
-  signal stu_qr               : std_logic_vector(STB_LEN-1 downto 0);
+  signal ldu_qr               : std_logic_vector(LDU_LEN-1 downto 0);
+  signal ldu_empty            : std_logic;
+  signal ldu_full             : std_logic;
+
+  signal stu_empty            : std_logic;
+  signal stu_full             : std_logic;
+  signal stu_qr               : std_logic_vector(STU_LEN-1 downto 0);
+
+  signal grp_full             : std_logic;
+
+  -- TODO: this pointer is a q address to write back to the data from the read
+  --       for now it is looped back on the lsu cuz single read tests, but in
+  --       the future it is expected to be associated to out of order multi issue reads
+  signal dmem_ptr             : std_logic_vector(LDU_LEN-1 downto 0);
+
+
+  ---
+  -- RGU
+  ---
 
   signal rgu_tq               : std_logic_vector(TAG_LEN-1 downto 0);
   signal rgu_vj               : std_logic_vector(XLEN-1 downto 0);
@@ -103,21 +143,17 @@ architecture rtl of core is
   signal rgu_tk               : std_logic_vector(TAG_LEN-1 downto 0);
   signal rgu_rk               : std_logic;
 
+  signal rob_empty            : std_logic;
+  signal rob_full             : std_logic;
+
+
+  ---
+  -- CBD
+  ---
+
   signal cdbr_vq              : std_logic_vector(XLEN-1 downto 0);
   signal cdbr_tq              : std_logic_vector(TAG_LEN-1 downto 0);
   signal cdbr_rq              : std_logic;
-
-  signal rgu_rob_full         : std_logic;
-  signal exu_exb_full         : std_logic;
-  signal lsu_ldb_full         : std_logic;
-  signal lsu_stb_full         : std_logic;
-  signal lsu_grp_full         : std_logic;
-
-  -- TODO: this pointer is a q address to write back to the data from the read
-  --       for now it is looped back on the lsu cuz single read tests, but in
-  --       the future it is expected to be associated to out of order multi issue reads
-  signal dmem_ptr             : std_logic_vector(LDB_LEN-1 downto 0);
-
 
   type cdbw_sig is record
     vq  : std_logic_vector(XLEN-1 downto 0);
@@ -170,8 +206,9 @@ begin
   disp_valid <= not disp_illegal;
 
   -- TODO place in system component
-  sys_full <= lsu_ldb_full or lsu_stb_full or lsu_grp_full or exu_exb_full or rgu_rob_full;
-  --sys_empty <=
+  sys_full <= ldu_full or stu_full or grp_full or exb_full or rob_full;
+  sys_empty <= ldu_empty or stu_empty or exb_empty or rob_empty;
+
   u_sys:
   entity hw.sys
   generic map(
@@ -209,7 +246,7 @@ begin
     i_clk         => i_clk,
     i_srst        => i_srst,
     i_arst        => i_arst,
-    o_rob_full    => rgu_rob_full,
+    o_rob_full    => rob_full,
     i_disp_valid  => disp_valid,
     i_disp_op     => disp_op,
     i_disp_rs1    => disp_rs1,
@@ -229,6 +266,30 @@ begin
 
 
   -- FIXME: When SYS op is done, should not do anything
+  -- TODO: System consideration, tags for units that are not related to the ROB can be managed independant of any physical structures
+  --       The only consideration is to have a way to know which "tags" have been used and which one are free to be used
+  --       I believe that the tag structure should be reworked to be better optimized with the reality of a CPU
+  --
+  --       Proposed structure
+  --       [TAG_LEN-1              ...     0]
+  --
+  --       [1][ROB_LEN-1           ...     0] -> Rob activation bit
+  --       [0][XX][ other structures tbd    ] --> Other structures: LDU, STU, BRU, SYS
+  --
+  --       Why? Because usually the rob will mostly be greater than other structures
+  --       In this scheme, other structures will have 4 time less entries than the ROB.
+  --       The issue might be that a typical
+  --
+  --
+  -- TODO: It would be nice to find a way to be able to scheme this structure in a "variable way"
+  --       What should it be able to do :
+  --       * Register a priority scheme
+  --       * Handle multiple tags and sub tags
+  --
+  --       Example
+  --       [R][L .. 0][B .. 0][ ... ]
+  --       Here it should first check for R, then for L, then for B and act accordingly
+  --       This should be in a core_config_pkg.vhd file
   process(disp_op, rgu_tq, ldu_qr, stu_qr)
   begin
     exu_tq <= (others => 'X');
@@ -269,7 +330,7 @@ begin
     i_clk         => i_clk,
     i_srst        => i_srst,
     i_arst        => i_arst,
-    o_exb_full    => exu_exb_full,
+    o_exb_full    => exb_full,
     i_disp_valid  => disp_valid,
     i_disp_op     => disp_op,
     i_disp_f3     => disp_f3,
@@ -292,7 +353,6 @@ begin
   );
 
 
-
   -- LSU
   lsu_ra <= '1' when disp_rs1 = ZERO(disp_rs1'range) else '0';
   lsu_va <= disp_imm when lsu_ra = '1' else (others => 'X');
@@ -303,12 +363,13 @@ begin
   lsu_td <= rgu_tk;
 
 
+
   u_lsu:
   entity hw.lsu
   generic map (
     RST_LEVEL => RST_LEVEL,
-    STB_LEN   => STB_LEN,
-    LDB_LEN   => LDB_LEN,
+    STU_LEN   => STU_LEN,
+    LDU_LEN   => LDU_LEN,
     TAG_LEN   => TAG_LEN,
     XLEN      => XLEN
   )
@@ -316,9 +377,11 @@ begin
     i_clk           => i_clk,
     i_arst          => i_arst,
     i_srst          => i_srst,
-    o_stb_full      => lsu_stb_full,
-    o_ldb_full      => lsu_ldb_full,
-    o_grp_full      => lsu_grp_full,
+    o_stu_empty     => stu_empty,
+    o_ldu_empty     => ldu_empty,
+    o_stu_full      => stu_full,
+    o_ldu_full      => ldu_full,
+    o_grp_full      => grp_full,
     i_disp_valid    => disp_valid,
     i_disp_op       => disp_op,
     i_disp_f3       => disp_f3,
@@ -329,8 +392,6 @@ begin
     i_disp_vd       => lsu_vd,
     i_disp_td       => lsu_td,
     i_disp_rd       => lsu_rd,
-    o_disp_stu_qr   => stu_qr,
-    o_disp_ldu_qr   => ldu_qr,
     o_cdbw_vq       => cdbw_lsu.vq,
     o_cdbw_tq       => cdbw_lsu.tq,
     o_cdbw_req      => cdbw_lsu.req,

@@ -4,11 +4,11 @@ lsu_tb
 
 exu_tb
 * exb_tb
-* alu_tb
+OK * alu_tb
 
 rgu_tb
-* reg_tb
-* rob_tb
+OK * reg_tb
+OK * rob_tb
 
 sys_tb
 

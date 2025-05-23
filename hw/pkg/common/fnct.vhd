@@ -94,7 +94,7 @@ package body fnct is
   begin
     if is_x(input) then
       assert NO_WARNING
-        report "COMMON.FNCT."">"": metavalue detected, returning X"
+        report "COMMON.FNCT.ONE_HOT_ENCODER: metavalue detected, returning X"
         severity warning;
 
       return INVALID_RETURN;
@@ -119,7 +119,7 @@ package body fnct is
   begin
     if is_x(input) then
       assert NO_WARNING
-        report "COMMON.FNCT."">"": metavalue detected, returning X"
+        report "COMMON.FNCT.PRIORITY_ENCODER: metavalue detected, returning X"
         severity warning;
 
       return INVALID_RETURN;
@@ -132,7 +132,7 @@ package body fnct is
     end loop;
 
     assert NO_WARNING
-      report "COMMON.FNCT."">"": no encoding found, returning X"
+      report "COMMON.FNCT.PRIORITY_ENCODER: no encoding found, returning X"
       severity warning;
 
     return INVALID_RETURN;

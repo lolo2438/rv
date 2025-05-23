@@ -77,12 +77,16 @@ begin
       if i_arst = RST_LEVEL then
         wr_col <= (0 => '1', others => '0');
       elsif rising_edge(i_clk) then
-        if re = '1' and empty = '0' then
-          wr_col <= wr_col sll 1;
-        end if;
+        if i_srst = RST_LEVEL then
+          wr_col <= (0 => '1', others => '0');
+        else
+          if re = '1' and empty = '0' then
+            wr_col <= wr_col sll 1;
+          end if;
 
-        if we = '1' and full = '0' then
-          wr_col <= wr_col srl 1;
+          if we = '1' and full = '0' then
+            wr_col <= wr_col srl 1;
+          end if;
         end if;
       end if;
     end process;

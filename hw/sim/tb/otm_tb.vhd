@@ -25,8 +25,8 @@ architecture tb of otm_tb is
     constant CLK_FREQ  : real := 100.0e6;
 
     signal i_clk      : std_logic := '0';
-    signal i_arst     : std_logic := '0';
-    signal i_srst     : std_logic := '0';
+    signal i_arst     : std_logic := not RST_LEVEL;
+    signal i_srst     : std_logic := not RST_LEVEL;
     signal i_we       : std_logic := '0';
     signal i_re       : std_logic := '0';
     signal i_wr_addr  : std_logic_vector(ADDR_LEN-1 downto 0) := (others => '0');
@@ -48,10 +48,10 @@ begin
     while test_suite loop
 
       -- Reset DUT
-      i_arst <= RST_LEVEL;
+      i_srst <= RST_LEVEL;
       wait until rising_edge(i_clk);
       wait for TCQ;
-      i_arst <= not RST_LEVEL;
+      i_srst <= not RST_LEVEL;
 
       -- Run Tests
       if run("V0_4x4_write_read") then
@@ -100,14 +100,14 @@ begin
         check_equal(result_table(2), std_logic_vector'("00"));
         check_equal(result_table(3), std_logic_vector'("01"));
 
-      elsif run("V0_4x4_write_and_read") then
-      elsif run("V1_32x32_write_read") then
-      elsif run("V1_32x32_write_and_read") then
-      elsif run("V1_reset_high") then
-      elsif run("V2_read_empty") then
-      elsif run("V2_write_full") then
-      elsif run("V2_Overwriting") then
-      elsif run("V2_OverReading") then
+      --elsif run("V0_4x4_write_and_read") then
+      --elsif run("V1_32x32_write_read") then
+      --elsif run("V1_32x32_write_and_read") then
+      --elsif run("V1_reset_high") then
+      --elsif run("V2_read_empty") then
+      --elsif run("V2_write_full") then
+      --elsif run("V2_Overwriting") then
+      --elsif run("V2_OverReading") then
       end if;
     end loop;
 

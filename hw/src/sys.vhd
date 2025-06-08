@@ -21,6 +21,7 @@ entity sys is
 
     i_en          : in  std_logic;                        --! Enable program counter
     i_restart     : in  std_logic;                        --! Restart a halted system in debug mode
+    i_step        : in  std_logic;                        --! Step the processor when in debug mode
     i_full        : in  std_logic;                        --! Full information about the different unit
     i_empty       : in  std_logic;                        --! Empty information about the different units
 
@@ -109,7 +110,7 @@ begin
   ---
   -- PC Logic
   ---
-  pc_stall <= debug or service or i_full or (not i_en);
+  pc_stall <= (not i_step and debug) or service or i_full or (not i_en);
 
   p_pc:
   process(i_clk, i_arst)

@@ -239,7 +239,7 @@ begin
     i_wr_addr   => disp_ptr,
     i_rd_mask   => op_rdy,
     o_rd_addr   => issue_ptr,
-    o_rd_valid  => issue_re
+    o_rd_rdy    => issue_re
   );
 
 

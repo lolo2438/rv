@@ -24,7 +24,7 @@ entity otm is
     i_wr_addr   : in  std_logic_vector(ADDR_LEN-1 downto 0);      --! Write address
     i_rd_mask   : in  std_logic_vector(2**ADDR_LEN-1 downto 0);   --! Read mask
     o_rd_addr   : out std_logic_vector(ADDR_LEN-1 downto 0);      --! Oldest Read address
-    o_rd_valid  : out std_logic                                   --! Read is valid
+    o_rd_rdy    : out std_logic                                   --! Ready to read a value from the otm
   );
 end entity;
 
@@ -49,7 +49,7 @@ architecture rtl of otm is
     signal wr_addr      : std_logic_vector(ADDR_LEN-1 downto 0);
     signal rd_addr      : std_logic_vector(ADDR_LEN-1 downto 0);
 
-    signal we, re, rd_valid : std_logic;
+    signal we, re, rd_rdy : std_logic;
     signal empty, full : std_logic;
 
 begin
@@ -176,13 +176,13 @@ begin
 
     rd_addr <= priority_encoder(rd_row);
 
-    rd_valid <= re and (or rd_row);
+    rd_rdy <= or rd_row;
 
 
     ---
     -- OUTPUT
     ---
-    o_rd_valid  <= rd_valid;
+    o_rd_rdy    <= rd_rdy;
     o_rd_addr   <= rd_addr;
     o_full      <= full;
     o_empty     <= empty;

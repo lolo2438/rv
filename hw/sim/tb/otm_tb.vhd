@@ -32,7 +32,7 @@ architecture tb of otm_tb is
     signal i_wr_addr  : std_logic_vector(ADDR_LEN-1 downto 0) := (others => '0');
     signal i_rd_mask  : std_logic_vector(2**ADDR_LEN-1 downto 0) := (others => '0');
     signal o_rd_addr  : std_logic_vector(ADDR_LEN-1 downto 0);
-    signal o_rd_valid : std_logic;
+    signal o_rd_rdy   : std_logic;
     signal o_empty    : std_logic;
     signal o_full     : std_logic;
 
@@ -57,7 +57,7 @@ begin
       if run("V0_4x4_write_read") then
         check(o_empty = '1', "Should be empty at begining");
         check(o_full = '0', "Should not be full at begining");
-        check(o_rd_valid = '0', "Out address should not be valid");
+        check(o_rd_rdy = '0', "Out address should not be ready");
 
         -- Write
         i_we <= '1';
@@ -67,7 +67,7 @@ begin
 
           wait until rising_edge(i_clk);
           wait for TCQ;
-          check(o_rd_valid = '0', "Out address should not be valid when writing");
+          check(o_rd_rdy = '1', "Out address should be ready when data is in the matrix");
           check(o_empty = '0', "Should not be empty when writing");
         end loop;
 
@@ -75,7 +75,7 @@ begin
         wait for TCQ;
         check(o_full = '1', "Should be full after writing");
         check(o_empty = '0', "Should not be empty after writing");
-        check(o_rd_valid = '0', "Out address should not be valid after writing");
+        check(o_rd_rdy = '1', "Out address should not be ready after writing");
 
         i_we <= '0';
         -- Read
@@ -83,7 +83,7 @@ begin
         i_rd_mask <= x"5";
         for i in 0 to 2**ADDR_LEN-1 loop
           wait until rising_edge(i_clk);
-          check(o_rd_valid = '1', "Out address should be valid when reading");
+          check(o_rd_rdy = '1', "Out address should be ready when reading");
           check(o_empty = '0', "Should not be empty when reading");
           i_rd_mask <= not (i_rd_mask);
           result_table(i) := o_rd_addr;
@@ -91,7 +91,7 @@ begin
           wait for TCQ;
           check(o_full = '0', "Should not be full when reading");
         end loop;
-        check(o_rd_valid = '0', "Out address should not be valid after reading");
+        check(o_rd_rdy = '0', "Out address should not be ready after reading");
         check(o_empty = '1', "Should  be empty after reading");
         check(o_full = '0', "Should not be full when reading");
 
@@ -131,7 +131,7 @@ begin
     i_wr_addr  => i_wr_addr,
     i_rd_mask  => i_rd_mask,
     o_rd_addr  => o_rd_addr,
-    o_rd_valid => o_rd_valid
+    o_rd_rdy => o_rd_rdy
   );
 
 end architecture;

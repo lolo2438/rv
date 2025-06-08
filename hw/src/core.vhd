@@ -7,11 +7,13 @@ use riscv.RV32I.all;
 
 library hw;
 use hw.tag_pkg.all;
+use hw.core_pkg.all;
 
 entity core is
   generic(
     -- EXTENSIONS
     RST_LEVEL : std_logic := '0';
+    REG_LEN   : natural;
     XLEN      : natural
   );
   port(
@@ -21,11 +23,23 @@ entity core is
     i_srst          : in  std_logic;                            --! Synchronous reset
     i_en            : in  std_logic;                            --! Enable the processor
     i_restart       : in  std_logic;                            --! Restart the core when state is DEBUG and HALTED
+    i_step          : in  std_logic;                            --! Step the core with one instruction when in DEBUG and HALTED
 
     -- STATUS I/F
     o_stall         : out std_logic;                            --! Core is not accepting new instructions
     o_halt          : out std_logic;                            --! Core is halted
     o_debug         : out std_logic;                            --! Core is in debug mode, Combined to halt indicates that EBREAK was executed
+
+    -- REG I/F
+    i_reg_rd_addr  : in  std_logic_vector(REG_LEN-1 downto 0); --! DEBUG: Register address to read from
+    o_reg_rd_data  : out std_logic_vector(XLEN-1 downto 0);    --! DEBUG: Data from the register
+    o_reg_rd_valid : out std_logic;                            --! DEBUG: Data read is valid
+
+
+    i_reg_wr_addr  : in  std_logic_vector(REG_LEN-1 downto 0); --! DEBUG: Register address to write to
+    i_reg_wr_data  : in  std_logic_vector(XLEN-1 downto 0);    --! DEBUG: Data to write in register
+    i_reg_wr_valid : in  std_logic;                            --! DEBUG: Data to write is valid,
+    o_reg_wr_ready : out std_logic;                            --! DEBUG: Ready signal is o_debug and o_halt
 
     -- IMEM I/F
     o_imem_addr     : out std_logic_vector(31 downto 0);        --! Address to read instruction from
@@ -84,6 +98,7 @@ architecture rtl of core is
   signal sys_empty            : std_logic;
   signal sys_stall            : std_logic;
   signal sys_halt             : std_logic;
+  signal sys_debug            : std_logic;
 
 
   ---
@@ -155,13 +170,6 @@ architecture rtl of core is
   signal cdbr_tq              : std_logic_vector(TAG_LEN-1 downto 0);
   signal cdbr_rq              : std_logic;
 
-  type cdbw_sig is record
-    vq  : std_logic_vector(XLEN-1 downto 0);
-    tq  : std_logic_vector(TAG_LEN-1 downto 0);
-    req : std_logic;
-    lh  : std_logic;
-    ack : std_logic;
-  end record;
 
   signal cdbw_exu : cdbw_sig;
   signal cdbw_lsu : cdbw_sig;
@@ -205,7 +213,6 @@ begin
 
   disp_valid <= not disp_illegal;
 
-  -- TODO place in system component
   sys_full <= ldu_full or stu_full or grp_full or exb_full or rob_full;
   sys_empty <= ldu_empty or stu_empty or exb_empty or rob_empty;
 
@@ -223,12 +230,13 @@ begin
     i_disp_op     => disp_op,
     i_disp_f12    => disp_f12,
     i_en          => i_en or i_imem_rdy,
+    i_step        => i_step,
     i_restart     => i_restart,
     i_full        => sys_full,
     i_empty       => sys_empty,
     o_stall       => sys_stall,
     o_halt        => sys_halt,
-    o_debug       => o_debug,
+    o_debug       => sys_debug,
     o_pc          => pc
   );
 
@@ -429,6 +437,7 @@ begin
   --       the stall so instructions unrelated to that full can still be executed
 
   o_stall <= sys_stall;
-  o_halt <= sys_halt;
+  o_halt  <= sys_halt;
+  o_debug <= sys_debug;
 
 end architecture;

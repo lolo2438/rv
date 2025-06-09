@@ -1,0 +1,19 @@
+1. FIX value i/f
+Input:
+SOURCE_VALUE
+SOURCE_TAG
+SOURCE_ADDR
+SOURCE_VALID
+->
+
+Output
+DEST_VALUE
+DEST_TAG
+DEST_ADDR
+DEST_VALID
+
+2. Simulate LDU
+3. Connect everything in core
+4. implement BRU
+5. Simuate BRU
+

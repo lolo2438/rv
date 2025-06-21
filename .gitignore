@@ -1,1 +1,5 @@
 hw/test/vunit_out/*
+*.hex
+*.bin
+*.elf
+*.bkp

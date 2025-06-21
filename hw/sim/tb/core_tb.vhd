@@ -24,6 +24,7 @@ end entity;
 architecture tb of core_tb is
 
   constant XLEN : natural := 32;
+  constant REG_LEN : natural := 5;
   constant RST_LEVEL : std_logic := '0';
 
   constant IMEM_DATA_WIDTH : natural := XLEN;
@@ -36,9 +37,10 @@ architecture tb of core_tb is
   -- CTRL
   signal core_clk           : std_logic;
   signal core_arst          : std_logic := not RST_LEVEL;
-  signal core_srst          : std_logic;
+  signal core_srst          : std_logic := not RST_LEVEL;
   signal core_en            : std_logic;
   signal core_restart       : std_logic;
+  signal core_step          : std_logic;
 
   signal core_stalled       : std_logic;
   signal core_halted        : std_logic;
@@ -217,12 +219,12 @@ begin
 
     procedure run_program is
     begin
-      core_srst <= '1';
+      core_srst <= RST_LEVEL;
       wait until rising_edge(core_clk);
-      core_srst <= '0';
+      core_srst <= not RST_LEVEL;
 
       core_en <= '1';
-      wait until (core_halted = '1' and core_debug = '1');
+      wait until (core_halted = '1');
       core_en <= '0';
     end procedure;
 
@@ -230,7 +232,9 @@ begin
     test_runner_setup(runner, runner_cfg);
 
     while test_suite loop
-      if run("test") then
+      if run("basic_program") then
+        imem_load_program("test_code/basic_program.hex");
+        run_program;
       elsif run("test2") then
       end if;
     end loop;
@@ -297,6 +301,7 @@ begin
   entity hw.core
   generic map (
     -- EXTENSIONS
+    REG_LEN   => REG_LEN,
     RST_LEVEL => RST_LEVEL,
     XLEN      => XLEN
   )
@@ -305,6 +310,7 @@ begin
     i_arst          => core_arst,
     i_srst          => core_srst,
     i_en            => core_en,
+    i_step          => core_step,
     i_restart       => core_restart,
     o_stall         => core_stalled,
     o_halt          => core_halted,

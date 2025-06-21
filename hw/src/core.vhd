@@ -7,7 +7,11 @@ use riscv.RV32I.all;
 
 library hw;
 use hw.tag_pkg.all;
-use hw.core_pkg.all;
+--use hw.core_pkg.all;
+
+library common;
+use common.fnct.clog2;
+use common.fnct.one_hot_decoder;
 
 entity core is
   generic(
@@ -31,15 +35,14 @@ entity core is
     o_debug         : out std_logic;                            --! Core is in debug mode, Combined to halt indicates that EBREAK was executed
 
     -- REG I/F
-    i_reg_rd_addr  : in  std_logic_vector(REG_LEN-1 downto 0); --! DEBUG: Register address to read from
-    o_reg_rd_data  : out std_logic_vector(XLEN-1 downto 0);    --! DEBUG: Data from the register
-    o_reg_rd_valid : out std_logic;                            --! DEBUG: Data read is valid
+    --i_reg_rd_addr  : in  std_logic_vector(REG_LEN-1 downto 0); --! DEBUG: Register address to read from
+    --o_reg_rd_data  : out std_logic_vector(XLEN-1 downto 0);    --! DEBUG: Data from the register
+    --o_reg_rd_valid : out std_logic;                            --! DEBUG: Data read is valid
 
-
-    i_reg_wr_addr  : in  std_logic_vector(REG_LEN-1 downto 0); --! DEBUG: Register address to write to
-    i_reg_wr_data  : in  std_logic_vector(XLEN-1 downto 0);    --! DEBUG: Data to write in register
-    i_reg_wr_valid : in  std_logic;                            --! DEBUG: Data to write is valid,
-    o_reg_wr_ready : out std_logic;                            --! DEBUG: Ready signal is o_debug and o_halt
+    --i_reg_wr_addr  : in  std_logic_vector(REG_LEN-1 downto 0); --! DEBUG: Register address to write to
+    --i_reg_wr_data  : in  std_logic_vector(XLEN-1 downto 0);    --! DEBUG: Data to write in register
+    --i_reg_wr_valid : in  std_logic;                            --! DEBUG: Data to write is valid,
+    --o_reg_wr_ready : out std_logic;                            --! DEBUG: Ready signal is o_debug and o_halt
 
     -- IMEM I/F
     o_imem_addr     : out std_logic_vector(31 downto 0);        --! Address to read instruction from
@@ -170,9 +173,24 @@ architecture rtl of core is
   signal cdbr_tq              : std_logic_vector(TAG_LEN-1 downto 0);
   signal cdbr_rq              : std_logic;
 
+  type cdbw_sig is record
+    vq : std_logic_vector(XLEN-1 downto 0);
+    tq : std_logic_vector(TAG_LEN-1 downto 0);
+    req : std_logic;
+    lh  : std_logic;
+    ack : std_logic;
+  end record;
+
+  type cdbw_array is array (natural range <>) of cdbw_sig;
 
   signal cdbw_exu : cdbw_sig;
   signal cdbw_lsu : cdbw_sig;
+
+  constant NB_CDB_INITIATOR : natural := 2;
+  signal cdbw_initiators : cdbw_array(clog2(NB_CDB_INITIATOR)-1 downto 0);
+  signal cdbw_req : std_logic_vector(NB_CDB_INITIATOR-1 downto 0);
+  signal cdbw_ack : std_logic_vector(NB_CDB_INITIATOR-1 downto 0);
+
 
 begin
 
@@ -190,7 +208,6 @@ begin
   ---
   -- LOGIC
   ---
-
   u_dec:
   entity hw.dec
   generic map(
@@ -298,21 +315,14 @@ begin
   --       [R][L .. 0][B .. 0][ ... ]
   --       Here it should first check for R, then for L, then for B and act accordingly
   --       This should be in a core_config_pkg.vhd file
-  process(disp_op, rgu_tq, ldu_qr, stu_qr)
-  begin
-    exu_tq <= (others => 'X');
-    case disp_op is
-      when OP_OP | OP_IMM | OP_AUIPC | OP_LUI | OP_JAL | OP_JALR =>
-        exu_tq <= rgu_tq;
-      when OP_LOAD =>
-        exu_tq <= format_tag(UNIT_LDU, ldu_qr);
-      when OP_STORE =>
-        exu_tq <= format_tag(UNIT_STU, stu_qr);
-      when OP_BRANCH =>
-        --exu_tq <= format_tag(UNIT_BRU, bru_qr);
-      when others => -- Exentions here
-    end case;
-  end process;
+  with disp_op select
+    exu_tq <= rgu_tq when OP_OP | OP_IMM | OP_AUIPC | OP_LUI | OP_JAL | OP_JALR,
+              --lsu_tq when OP_LOAD | OP_STORE,
+              --bru_tq when OP_BRANCH,
+              --sys_tq when OP_SYSTEM,
+              --format_tag(UNIT_LDU, ldu_qr) when
+              --format_tag(UNIT_STU, stu_qr)
+              (others => 'X') when others;
 
   exu_vj_src <= '0' when disp_op = OP_OP or disp_op = OP_BRANCH else '1';
 
@@ -361,7 +371,9 @@ begin
   );
 
 
+  ---
   -- LSU
+  ---
   lsu_ra <= '1' when disp_rs1 = ZERO(disp_rs1'range) else '0';
   lsu_va <= disp_imm when lsu_ra = '1' else (others => 'X');
   lsu_ta <= exu_tq;
@@ -423,9 +435,35 @@ begin
   );
 
 
-  -- TODO: CDBW arbiter logic
-  -- cdbw_exu, cdbw_lsu, cdbr_*
+  ---
+  -- CDB
+  ---
+  cdbw_initiators(0) <= cdbw_exu;
+  cdbw_initiators(1) <= cdbw_lsu;
 
+  g_cdbw_initiator_ctrl:
+  for i in 0 to NB_CDB_INITIATOR generate
+    cdbw_req(i) <= cdbw_initiators(i).req;
+    cdbw_initiators(i).ack <= cdbw_ack(i);
+  end generate;
+
+  u_cdb_rra:
+  entity hw.arbiter(round_robin)
+  generic map (
+    RST_LEVEL => RST_LEVEL,
+    N         => NB_CDB_INITIATOR
+  )
+  port map (
+    i_clk     => i_clk,
+    i_srst    => i_srst,
+    i_arst    => i_arst,
+    i_req     => cdbw_req,
+    o_ack     => cdbw_ack
+  );
+
+  cdbr_vq <= cdbw_initiators(to_integer(unsigned(one_hot_decoder(cdbw_ack)))).vq;
+  cdbr_tq <= cdbw_initiators(to_integer(unsigned(one_hot_decoder(cdbw_ack)))).tq;
+  cdbr_rq <= or cdbw_ack;
 
   ---
   -- OUTPUT

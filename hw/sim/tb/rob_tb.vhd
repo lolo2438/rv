@@ -353,6 +353,38 @@ begin
         check_equal(o_disp_vj, std_logic_vector'(x"DDCCBBAA"));
         check_equal(o_disp_qj, qr(3));
 
+      elsif run("VQ1_no_foward") then
+        i_disp_rob <= '1';
+        i_disp_rd <= REG_X04;
+        wait until rising_edge(i_clk);
+        qr(0) <= o_disp_qr;
+        i_disp_rd <= REG_X04;
+        wait until rising_edge(i_clk);
+        qr(1) <= o_disp_qr;
+        i_disp_rd <= REG_X04;
+        wait until rising_edge(i_clk);
+        qr(2) <= o_disp_qr;
+        i_disp_rd <= REG_X04;
+        wait until rising_edge(i_clk);
+        qr(3) <= o_disp_qr;
+        i_disp_rob <= '0';
+
+        i_wb_addr <= qr(1);
+        i_wb_result <= x"AABBCCDD";
+        i_wb_valid <= '1';
+        wait until rising_edge(i_clk);
+
+        i_wb_addr <= qr(2);
+        i_wb_result <= x"DDCCBBAA";
+        i_wb_valid <= '1';
+        wait until rising_edge(i_clk);
+
+        i_wb_valid <= '0';
+        i_disp_rs1 <= REG_X04;
+        wait until rising_edge(i_clk);
+
+        check(o_disp_rj = '0', "Should not be ready");
+
       --elsif run("VQ1_simultaneous") then
       --elsif run("VQ1_typical") then
       --elsif run("VQ2_foward_latest_not_rdy") then

@@ -102,13 +102,13 @@ architecture rtl of lsu is
   -- LDU
   ---
   signal ldu_disp_load    : std_logic;
-  signal ldu_issue_rdy    : std_logic;
-  signal ldu_issue_valid  : std_logic;
-  signal ldu_issue_addr   : std_logic_vector(XLEN-1 downto 0);
-  signal ldu_issue_qr     : std_logic_vector(LDU_LEN-1 downto 0);
-  signal ldu_wb_valid     : std_logic;
-  signal ldu_wb_qr        : std_logic_vector(LDU_LEN-1 downto 0);
-  signal ldu_wb_data      : std_logic_vector(XLEN-1 downto 0);
+  signal ldu_mem_wr_rdy   : std_logic;
+  signal ldu_mem_wr_valid : std_logic;
+  signal ldu_mem_wr_addr  : std_logic_vector(XLEN-1 downto 0);
+  signal ldu_mem_wr_qr    : std_logic_vector(LDU_LEN-1 downto 0);
+  signal ldu_mem_rd_valid : std_logic;
+  signal ldu_mem_rd_qr    : std_logic_vector(LDU_LEN-1 downto 0);
+  signal ldu_mem_rd_data  : std_logic_vector(XLEN-1 downto 0);
   signal ldu_rd_grp_match : std_logic;
 
   ---
@@ -121,10 +121,10 @@ begin
   ---
   -- INPUT
   ---
-  ldu_issue_rdy <= i_mem_rd_rdy;
-  ldu_wb_data   <= i_mem_rd_data;
-  ldu_wb_valid  <= i_mem_rd_valid;
-  ldu_wb_qr     <= i_mem_rd_ptr;
+  ldu_mem_wr_rdy    <= i_mem_rd_rdy;
+  ldu_mem_rd_data   <= i_mem_rd_data;
+  ldu_mem_rd_valid  <= i_mem_rd_valid;
+  ldu_mem_rd_qr     <= i_mem_rd_ptr;
 
   grp_disp_fence  <= i_disp_valid when i_disp_op = OP_MISC_MEM and i_disp_f3 = FUNCT3_FENCE else '0';
   ldu_disp_load   <= i_disp_valid when i_disp_op = OP_LOAD else '0';
@@ -225,13 +225,13 @@ begin
     i_stu_addr      => stu_issue_addr,
     i_stu_data      => stu_issue_data,
     i_stu_dep       => stu_deps,
-    i_issue_rdy     => ldu_issue_rdy,
-    o_issue_valid   => ldu_issue_valid,
-    o_issue_addr    => ldu_issue_addr,
-    o_issue_qr      => ldu_issue_qr,
-    i_wb_valid      => ldu_wb_valid,
-    i_wb_qr         => ldu_wb_qr,
-    i_wb_data       => ldu_wb_data,
+    i_mem_wr_rdy    => ldu_mem_wr_rdy,
+    o_mem_wr_valid  => ldu_mem_wr_valid,
+    o_mem_wr_addr   => ldu_mem_wr_addr,
+    o_mem_wr_qr     => ldu_mem_wr_qr,
+    i_mem_rd_valid  => ldu_mem_rd_valid,
+    i_mem_rd_qr     => ldu_mem_rd_qr,
+    i_mem_rd_data   => ldu_mem_rd_data,
     o_cdbw_vq       => o_cdbw_vq,
     o_cdbw_tq       => o_cdbw_tq,
     o_cdbw_req      => o_cdbw_req,
@@ -256,9 +256,9 @@ begin
   o_mem_wr_data  <= stu_issue_data;
   o_mem_wr_we    <= store_byten;
 
-  o_mem_rd_re    <= ldu_issue_valid;
-  o_mem_rd_addr  <= ldu_issue_addr;
-  o_mem_rd_ptr   <= ldu_issue_qr;
+  o_mem_rd_re    <= ldu_mem_wr_valid;
+  o_mem_rd_addr  <= ldu_mem_wr_addr;
+  o_mem_rd_ptr   <= ldu_mem_wr_qr;
 
 
 end architecture;

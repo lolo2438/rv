@@ -3,12 +3,16 @@ use ieee.std_logic_1164.all;
 
 package tag_pkg is
 
-  constant TAG_BITS    : natural := 2;
+  constant TAG_BITS     : natural := 3;
 
-  constant TAG_RGU    : std_logic_vector(1 downto 0) := "00";
-  constant TAG_LDU    : std_logic_vector(1 downto 0) := "01";
-  constant TAG_STU    : std_logic_vector(1 downto 0) := "10";
-  constant TAG_BRU    : std_logic_vector(1 downto 0) := "11";
+  constant UNIT_RGU_ROB : std_logic_vector(TAG_BITS-1 downto 0) := "000";
+  --constant UNIT_RGU_REG : std_logic_vector(TAG_BITS-1 downto 0) := "001";
+  constant UNIT_LSU_LDU : std_logic_vector(TAG_BITS-1 downto 0) := "010";
+  constant UNIT_LSU_STU : std_logic_vector(TAG_BITS-1 downto 0) := "011";
+  --constant UNIT_BRU_BRP : std_logic_vector(TAG_BITS-1 downto 0) := "100";
+  --constant UNIT_BRU_RAS : std_logic_vector(TAG_BITS-1 downto 0) := "101";
+  --constant UNIT_SYS     : std_logic_vector(TAG_BITS-1 downto 0) := "110";
+  --constant UNIT_SYS_CSR : std_logic_vector(TAG_BITS-1 downto 0) := "111";
 
   constant STU_LEN : natural := 5;
   constant LDU_LEN : natural := 5;
@@ -21,77 +25,47 @@ package tag_pkg is
 
   constant TAG_LEN : natural := TAG_BITS + MAX_UNIT_LEN;
 
-  type unit is (UNIT_RGU, UNIT_LDU, UNIT_STU, UNIT_BRU);
+  -- Derived constants for decoding
+  constant TAG_UNIT_HIGH : natural := TAG_LEN - 1;
+  constant TAG_UNIT_LOW  : natural := TAG_UNIT_HIGH - TAG_BITS;
 
-  --! \fn format_tag
-  --! \arg u   The unit that the tag is destined to
-  --! \arg buf The buffer address which the value will be written back
+  constant TAG_ADDR_HIGH : natural := TAG_UNIT_LOW - 1;
+  constant TAG_ADDR_LOW  : natural := 0;
+
+
+  --! \arg unit the unit to encode in the tag
+  --! \arg addr the address to encode in the tag
   --! \brief Formats the tag in the correct format
-  --! \note Depends on *_LEN constants, TAG_* constants, MAX_UNIT_LEN, TAG_LEN and unit type
-  impure function format_tag(u : unit; buf : std_logic_vector) return std_logic_vector;
+  --! \note unit should be a UNIT_* constant
+  pure function tag_format(unit : std_logic_vector; addr : std_logic_vector) return std_logic_vector;
 
-  --! \fn read_tag
-  --! \arg tag the tag to read from
-  --! \brief Returns the TAG_* value in the tag vector
-  impure function read_tag(tag : std_logic_vector) return std_logic_vector;
+  --! \arg
+  --! \brief
+  impure function tag_read_unit(tag : std_logic_vector) return std_logic_vector;
 
-  --! \fn unpack_tag
-  --! \arg tag the tag to read from
-  --! \brief Returns the tag address in the tag vector
-  impure function unpack_tag(tag : std_logic_vector) return std_logic_vector;
+  --! \arg
+  --! \brief
+  impure function tag_read_addr(tag : std_logic_vector) return std_logic_vector;
 
 end package;
 
 
 package body tag_pkg is
 
-  impure function format_tag(u : unit; buf : std_logic_vector) return std_logic_vector is
-    variable resize_buf : std_logic_vector(MAX_UNIT_LEN-1 downto 0) := (others => '0');
-    variable tag : std_logic_vector(TAG_LEN-1 downto 0);
+  pure function tag_format(unit : std_logic_vector; addr : std_logic_vector) return std_logic_vector is
   begin
+    return unit & addr;
+  end function;
 
-    if buf'length > resize_buf'length then
-      assert false report "Buffer length is greated that maximum unit buffer length" severity failure;
-    end if;
-
-    if buf'right /= 0 then
-      assert false report "invalid range specified for buffer: Right parameter must be 0" severity failure;
-    end if;
-
-    resize_buf(buf'range) := buf;
-
-    case u is
-      when UNIT_RGU => tag := TAG_RGU & resize_buf;
-      when UNIT_LDU => tag := TAG_LDU & resize_buf;
-      when UNIT_STU => tag := TAG_STU & resize_buf;
-      when UNIT_BRU => tag := TAG_BRU & resize_buf;
-      when others =>
-        assert false report "Invalid unit specified" severity failure;
-    end case;
-
-    return tag;
+  impure function tag_read_unit(tag : std_logic_vector) return std_logic_vector is
+  begin
+    return tag(TAG_UNIT_HIGH downto TAG_UNIT_LOW);
   end function;
 
 
-  impure function read_tag(tag : std_logic_vector) return std_logic_vector is
+  impure function tag_read_addr(tag : std_logic_vector) return std_logic_vector is
   begin
-    return tag(tag'left downto tag'left-TAG_BITS+1);
-  end function;
-
-  impure function unpack_tag(tag : std_logic_vector) return std_logic_vector is
-  begin
-    case read_tag(tag) is
-      when TAG_RGU =>
-        return tag(ROB_LEN-1 downto 0);
-      when TAG_LDU =>
-        return tag(LDU_LEN-1 downto 0);
-      when TAG_STU =>
-        return tag(STU_LEN-1 downto 0);
-      when TAG_BRU =>
-        return tag(BRU_LEN-1 downto 0);
-      when others =>
-        assert false report "Invalid tag specified" severity failure;
-    end case;
+    return tag(TAG_ADDR_HIGH downto TAG_ADDR_LOW);
   end function;
 
 end package body;

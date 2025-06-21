@@ -80,9 +80,6 @@ architecture rtl of rgu is
   signal tj, tk       : std_logic_vector(TAG_LEN-1 downto 0);
   signal rj, rk       : std_logic;
 
-  signal cdb_rj       : std_logic;
-  signal cdb_rk       : std_logic;
-
 begin
 
 
@@ -165,42 +162,24 @@ begin
     i_wb_valid      => i_cdbr_rq
   );
 
-  -- Priority analysis for READY
-  -- CDB | ROB | REG | Select
-  --  0  |  0  |  0  |   X  Only happens at startup
-  --  0  |  0  |  1  |  REG
-  --  0  |  1  |  0  |  ROB
-  --  0  |  1  |  1  |  REG
-  --  1  |  0  |  0  |  CDB
-  --  1  |  0  |  1  |  REG
-  --  1  |  1  |  0  |  CDB
-  --  1  |  1  |  1  |  REG
-  -- REG > CDB > ROB
-  --
-
-
-  -- Fowarding
-  -- FIXME: To foward one must know if rs = rd, but the tag is located in the ROB
-  --        Therefore, the CDB can't know and the fowarding is combinatorial in the ROB
- -- cdb_rj <= '1' when i_cdb_rq = '1' and i_cdb_tq(ROB_LEN-1 downto 0) =  else '0';
-  vj <= reg_vj    when reg_rj = '1' else
-        i_cdbr_vq  when cdb_rj = '1' else
-        rob_vj    when rob_rj = '1' else
+  vj <= reg_vj when reg_rj = '1' else
+        rob_vj when rob_rj = '1' else
         (others => 'X');
-  tj <= TAG_RGU & reg_qj;
-  rj <= reg_rj or cdb_rj or rob_rj;
+  tj <= tag_format(UNIT_RGU_ROB, reg_qj);
+  rj <= reg_rj or rob_rj;
 
- -- cdb_rk <= '1' when i_cdb_rq = '1' and i_cdb_tq(ROB_LEN-1 downto 0) =  else '0';
-  -- vk
-  tk <= TAG_RGU & reg_qk;
-  rk <= reg_rk or cdb_rk or rob_rk;
+  vk <= reg_vk when reg_rk = '1' else
+        rob_vk when rob_rk = '1' else
+        (others => 'X');
+  tk <= tag_format(UNIT_RGU_ROB, reg_qk);
+  rk <= reg_rk or rob_rk;
 
   ---
   -- OUTPUT
   ---
   o_rob_full <= rob_full;
 
-  o_disp_tq <= TAG_RGU & rob_disp_qr;
+  o_disp_tq <= tag_format(UNIT_RGU_ROB, rob_disp_qr);
 
   o_data_vj <= vj;
   o_data_tj <= tj;

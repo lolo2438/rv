@@ -10,6 +10,9 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+library common;
+use common.fnct.all;
+
 entity rob is
   generic(
     RST_LEVEL : std_logic := '0';   --! Reset level, default = '0'
@@ -93,6 +96,7 @@ architecture rtl of rob is
 begin
 
   disp <= i_disp_rob;
+
   ---
   -- DATAPATH
   ---
@@ -157,7 +161,7 @@ begin
   -- in any case: if hit but not valid, do not foward
 
   -- Strategy: create a bit vector of hits, and with it's respective "valid" and "busy" bit
-  --           Send bit vector through a shifted priority encoder depending on rd and select the latest
+  --           Send bit vector through a shifted priority encoder depending on rd_ptr to select the latest
   disp_rs(1).reg_addr <= i_disp_rs1;
   disp_rs(2).reg_addr <= i_disp_rs2;
 
@@ -165,39 +169,24 @@ begin
   for k in 1 to 2 generate
     b_rob_buf_foward_rs:
     block
-      signal rs : std_logic_vector(REG_LEN-1 downto 0);   -- register source addr
-      signal hit : std_logic_vector(0 to ROB_SIZE-1);  -- hit vector
-      signal rhit : std_logic_vector(0 to ROB_SIZE-1); -- rotated hit vector
-      signal rob_buf_fwd_addr : unsigned(ROB_LEN-1 downto 0);
+      signal rs               : std_logic_vector(REG_LEN-1 downto 0);  -- register source addr
+      signal hit              : std_logic_vector(ROB_SIZE-1 downto 0); -- hit vector
+      signal rhit             : std_logic_vector(ROB_SIZE-1 downto 0); -- rotated hit vector
+      signal rhit_masked      : std_logic_vector(ROB_SIZE-1 downto 0); -- rotated hit vector
+      signal rob_buf_fwd_addr : unsigned(ROB_LEN-1 downto 0); -- Latest entry in the rob
     begin
       rs <= disp_rs(k).reg_addr;
 
-      p_rob_buf_hit:
-      process(all)
-      begin
-        for i in 0 to ROB_SIZE-1 loop
-          if rob_buf(i).busy = '1' and rob_buf(i).valid = '1' and rob_buf(i).rd = rs then
-            hit(i) <= '1';
-          else
-            hit(i) <= '0';
-          end if;
-        end loop;
-      end process;
+      g_rob_buf_hit:
+      for i in 0 to ROB_SIZE-1 generate
+        hit(i) <= rob_buf(i).busy when rob_buf(i).rd = rs else '0';
+      end generate;
 
       rhit <= hit ror to_integer(rd_ptr);
+      rhit_masked <= rhit and one_hot_encoder(priority_encoder(rhit));
+      rob_buf_fwd_addr <= unsigned(one_hot_decoder(rhit_masked)) rol to_integer(rd_ptr);
 
-      p_prio_enc:
-      process(all)
-      begin
-        rob_buf_fwd_addr <= (others => '0');
-        for i in 0 to ROB_SIZE-1 loop
-          if rhit(i) = '1' then
-            rob_buf_fwd_addr <= i + rd_ptr;
-          end if;
-        end loop;
-      end process;
-
-      disp_rs(k).rob_rdy  <= or hit;
+      disp_rs(k).rob_rdy  <= rob_buf(to_integer(rob_buf_fwd_addr)).valid and (or hit);
       disp_rs(k).rob_data <= rob_buf(to_integer(rob_buf_fwd_addr)).result;
       disp_rs(k).rob_addr <= std_logic_vector(rob_buf_fwd_addr);
     end block;

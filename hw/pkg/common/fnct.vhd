@@ -17,22 +17,40 @@ package fnct is
   --! \brief Computes the clog2 of an integer
   pure function clog2 (x : positive) return natural;
 
+  --! \param x the input value
+  --! \return True if x is a power of two
+  pure function is_pow2 ( x : natural) return boolean;
+
   --! \param input an input vector encoded with binary addressing
   --! \return a one hot encoded version of the vector
   --! \brief Converts an address (b"10") to a one hot encoded version (b"0100")
   pure function one_hot_encoder(input : std_ulogic_vector) return std_ulogic_vector;
 
-  --! \param input an input vector encoded with left most bit having more priority
-  --! \return the address of the bit with the most priority
-  --! \brief
-  --!        Ascending: b"1000" -> b"00"
-  --!        Descending: b"1000" -> b"11"
+  --! \param Takes in a one hot vector
+  --! \return the index of the bit of the one hot vector
+  --! \brief b"0101" -> b"10" (downto)
+  --!                -> b"01" (to)
+  pure function one_hot_decoder(input : std_ulogic_vector) return std_ulogic_vector;
+
+  --! \param A vector
+  --! \return True if input vector is one hot encoded, else false
+  pure function is_one_hot(input : std_ulogic_vector) return boolean;
+
+
+  --! \param input an input vector encoded with the address of the MSB
+  --! \return the address of the MSB
+  --! \brief               0123
+  --!        Ascending:  b"1010" -> b"10"
+  --!
+  --!                      3210
+  --!        Descending: b"1010" -> b"11"
   pure function priority_encoder(input : std_ulogic_vector) return std_ulogic_vector;
 
   --! \param input an input vector containing the bits to be reversed
   --! \return The reversed vector
   --! \brief Reverses the vector : b"0100" -> b"0010"
   pure function bit_reverse(input : std_ulogic_vector) return std_ulogic_vector;
+
 
   --! \param[in] file_name The file
   --! \param[out] mem The memory to initialize
@@ -87,6 +105,17 @@ package body fnct is
   end function;
 
 
+  pure function is_pow2 ( x : natural) return boolean is
+    variable v : natural := 1;
+  begin
+    while v < x loop
+      v := v * 2;
+    end loop;
+
+    return (v = x);
+  end function;
+
+
   pure function one_hot_encoder(input : std_ulogic_vector) return std_ulogic_vector is
     constant ENCODING_SIZE : natural := 2**input'length;
     constant INVALID_RETURN : std_logic_vector(ENCODING_SIZE-1 downto 0) := (others => 'X');
@@ -113,9 +142,43 @@ package body fnct is
   end function;
 
 
+  pure function is_one_hot(input : std_ulogic_vector) return boolean is
+    variable x : unsigned(input'range) := unsigned(input);
+  begin
+    return ((x and (x - 1)) = 0);
+  end function;
+
+
+  pure function one_hot_decoder(input : std_ulogic_vector) return std_ulogic_vector is
+    constant RETURN_LENGTH : natural := clog2(input'length);
+    constant INVALID_RETURN : std_ulogic_vector(RETURN_LENGTH-1 downto 0) := (others => 'X');
+  begin
+
+    if is_x(input) then
+      assert NO_WARNING
+      report "COMMON.FNCT.ONE_HOT_DECODER: metavalue detected, returning X"
+      severity warning;
+
+      return INVALID_RETURN;
+    end if;
+
+    if not is_one_hot(input) then
+      assert NO_WARNING
+      report "COMMON.FNCT.ONE_HOT_DECODER: Input is not one hot"
+      severity warning;
+
+      return INVALID_RETURN;
+    end if;
+
+    return priority_encoder(input);
+  end function;
+
+
   pure function priority_encoder(input : std_ulogic_vector) return std_ulogic_vector is
     constant RETURN_LENGTH : natural := clog2(input'length);
     constant INVALID_RETURN : std_ulogic_vector(RETURN_LENGTH-1 downto 0) := (others => 'X');
+    variable LEFT : natural;
+    variable RIGHT : natural;
   begin
     if is_x(input) then
       assert NO_WARNING
@@ -125,7 +188,15 @@ package body fnct is
       return INVALID_RETURN;
     end if;
 
-    for i in input'range loop
+    if input'ascending then
+      RIGHT := input'left;
+      LEFT := input'right;
+    else
+      RIGHT := input'right;
+      LEFT := input'left;
+    end if;
+
+    for i in LEFT downto RIGHT loop
       if input(i) = '1' then
         return std_ulogic_vector(to_unsigned(i, RETURN_LENGTH));
       end if;

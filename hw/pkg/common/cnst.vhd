@@ -4,4 +4,5 @@ package cnst is
 
   constant NO_WARNING : boolean := false;
 
+
 end package;

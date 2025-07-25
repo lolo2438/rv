@@ -6,4 +6,6 @@ package types is
   --! \brief Type definition for a matrix of std_logic
   type std_logic_matrix is array (natural range <>) of std_logic_vector;
 
+  type type_priority is (MSB, LSB);
+
 end package;

@@ -13,11 +13,11 @@ use common.types.std_logic_matrix;
 library sim;
 use sim.tb_pkg.clk_gen;
 
-entity otm_tb is
+entity dispatcher_tb is
   generic (runner_cfg : string);
 end entity;
 
-architecture tb of otm_tb is
+architecture tb of dispatcher_tb is
 
     constant ADDR_LEN  : natural := 2;
     constant RST_LEVEL : std_logic := '0';
@@ -32,7 +32,6 @@ architecture tb of otm_tb is
     signal i_wr_addr  : std_logic_vector(ADDR_LEN-1 downto 0) := (others => '0');
     signal i_rd_mask  : std_logic_vector(2**ADDR_LEN-1 downto 0) := (others => '0');
     signal o_rd_addr  : std_logic_vector(ADDR_LEN-1 downto 0);
-    signal o_rd_rdy   : std_logic;
     signal o_empty    : std_logic;
     signal o_full     : std_logic;
 
@@ -50,14 +49,13 @@ begin
       -- Reset DUT
       i_srst <= RST_LEVEL;
       wait until rising_edge(i_clk);
-      wait for TCQ;
       i_srst <= not RST_LEVEL;
+      wait until rising_edge(i_clk);
 
       -- Run Tests
       if run("V0_4x4_write_read") then
         check(o_empty = '1', "Should be empty at begining");
         check(o_full = '0', "Should not be full at begining");
-        check(o_rd_rdy = '0', "Out address should not be ready");
 
         -- Write
         i_we <= '1';
@@ -67,7 +65,6 @@ begin
 
           wait until rising_edge(i_clk);
           wait for TCQ;
-          check(o_rd_rdy = '1', "Out address should be ready when data is in the matrix");
           check(o_empty = '0', "Should not be empty when writing");
         end loop;
 
@@ -75,15 +72,13 @@ begin
         wait for TCQ;
         check(o_full = '1', "Should be full after writing");
         check(o_empty = '0', "Should not be empty after writing");
-        check(o_rd_rdy = '1', "Out address should not be ready after writing");
 
         i_we <= '0';
         -- Read
         i_re <= '1';
-        i_rd_mask <= x"5";
+        i_rd_mask <= x"A";
         for i in 0 to 2**ADDR_LEN-1 loop
           wait until rising_edge(i_clk);
-          check(o_rd_rdy = '1', "Out address should be ready when reading");
           check(o_empty = '0', "Should not be empty when reading");
           i_rd_mask <= not (i_rd_mask);
           result_table(i) := o_rd_addr;
@@ -91,7 +86,6 @@ begin
           wait for TCQ;
           check(o_full = '0', "Should not be full when reading");
         end loop;
-        check(o_rd_rdy = '0', "Out address should not be ready after reading");
         check(o_empty = '1', "Should  be empty after reading");
         check(o_full = '0', "Should not be full when reading");
 
@@ -100,7 +94,37 @@ begin
         check_equal(result_table(2), std_logic_vector'("00"));
         check_equal(result_table(3), std_logic_vector'("01"));
 
-      --elsif run("V0_4x4_write_and_read") then
+      elsif run("V0_4x4_write_and_read") then
+
+        i_we <= '1';
+        i_wr_addr <= "01";
+        wait until rising_edge(i_clk);
+        -- [ XX XX XX 01 ]
+
+        i_wr_addr <= "11";
+        wait until rising_edge(i_clk);
+        -- [ XX XX 11 01 ]
+
+        i_re <= '1';
+        i_rd_mask <= x"2";
+        i_wr_addr <= "00";
+        wait until rising_edge(i_clk);
+        check_equal(o_rd_addr, std_logic_vector'("11"));
+        -- [ XX XX 00 01 ]
+
+        i_wr_addr <= "10";
+        wait until rising_edge(i_clk);
+        check_equal(o_rd_addr, std_logic_vector'("00"));
+        -- [ XX XX 10 01 ]
+        i_we <= '0';
+        i_rd_mask <= x"1";
+        wait until rising_edge(i_clk);
+        check_equal(o_rd_addr, std_logic_vector'("01"));
+        -- [ XX XX Xx 10 ]
+        wait until rising_edge(i_clk);
+        check_equal(o_rd_addr, std_logic_vector'("10"));
+
+
       --elsif run("V1_32x32_write_read") then
       --elsif run("V1_32x32_write_and_read") then
       --elsif run("V1_reset_high") then
@@ -116,7 +140,7 @@ begin
   end process;
 
 
-  DUT: entity hw.otm
+  DUT: entity hw.dispatcher(age_fifo)
   generic map( RST_LEVEL => RST_LEVEL,
                ADDR_LEN => ADDR_LEN
   )
@@ -130,8 +154,7 @@ begin
     i_re       => i_re,
     i_wr_addr  => i_wr_addr,
     i_rd_mask  => i_rd_mask,
-    o_rd_addr  => o_rd_addr,
-    o_rd_rdy => o_rd_rdy
+    o_rd_addr  => o_rd_addr
   );
 
 end architecture;

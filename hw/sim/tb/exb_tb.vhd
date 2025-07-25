@@ -5,13 +5,15 @@ use ieee.numeric_std.all;
 library vunit_lib;
 context vunit_lib.vunit_context;
 
-library hw;
-use hw.tag_pkg.TAG_LEN;
-
 library common;
+
+library hw;
 
 library sim;
 use sim.tb_pkg.clk_gen;
+
+library riscv;
+use riscv.RV32I.all;
 
 entity exb_tb is
   generic (runner_cfg : string);
@@ -25,13 +27,14 @@ architecture tb of exb_tb is
   constant RST_LEVEL : std_logic := '0';
   constant EXB_LEN   : natural := 2;
   constant XLEN      : natural := 32;
+  constant TAG_LEN   : natural := 4;
 
   ---
   -- DUT Signals
   ---
   signal i_clk       : std_logic := '0';
-  signal i_arst      : std_logic := '0';
-  signal i_srst      : std_logic := '0';
+  signal i_arst      : std_logic := not RST_LEVEL;
+  signal i_srst      : std_logic := not RST_LEVEL;
   signal o_full      : std_logic;
   signal o_empty     : std_logic;
 
@@ -76,9 +79,107 @@ begin
     test_runner_setup(runner, runner_cfg);
 
     while test_suite loop
-      if run("test0") then
+      i_srst <= RST_LEVEL;
+      wait until rising_edge(i_clk);
+      i_srst <= not RST_LEVEL;
+
+      if run("VQ0_write_read") then
+        i_disp_we <= '1';
+        i_disp_op <= OP_OP;
+        i_disp_f3 <= FUNCT3_ADDSUB;
+        i_disp_f7 <= FUNCT7_SUB;
+        i_disp_vj <= x"AABBCCDD";
+        i_disp_tj <= (others => 'X');
+        i_disp_rj <= '1';
+        i_disp_vk <= x"1A2B3C4D";
+        i_disp_tk <= (others => 'X');
+        i_disp_rk <= '1';
+        i_disp_tq <= x"A";
+
+        wait until rising_edge(i_clk);
+        i_disp_we <= '0';
+        i_issue_rdy <= '1';
+        check(o_issue_we = '0', "Should not try to issue");
+        wait until rising_edge(i_clk);
+        check(o_issue_we = '1', "Should try to issue");
+        check_equal(o_issue_f3, FUNCT3_ADDSUB);
+        check_equal(o_issue_f7, FUNCT7_SUB);
+        check_equal(o_issue_vj, std_logic_vector'(x"AABBCCDD"));
+        check_equal(o_issue_vk, std_logic_vector'(x"1A2B3C4D"));
+        check_equal(o_issue_tq, std_logic_vector'(x"A"));
+        wait until rising_edge(i_clk);
+        check(o_issue_we = '0', "Should no longer try to issue");
+
+      elsif run("VQ0_cdb_writeback") then
+        i_disp_we <= '1';
+        i_disp_op <= OP_IMM;
+        i_disp_f3 <= FUNCT3_AND;
+        i_disp_f7 <= (others => 'X');
+        i_disp_vj <= (others => 'X');
+        i_disp_tj <= x"A";
+        i_disp_rj <= '0';
+        i_disp_tq <= x"B";
+
+        i_disp_vk <= x"ABCDEF01";
+        i_disp_tk <= (others => 'X');
+        i_disp_rk <= '1';
+
+        wait until rising_edge(i_clk);
+        i_disp_we <= '0';
+        check(o_issue_we = '0', "should not try to issue when dispatching");
+        wait until rising_edge(i_clk);
+        check(o_issue_we = '0', "should not try to issue after dispatch");
+
+        i_cdbr_rq <= '1';
+        i_cdbr_tq <= x"A";
+        i_cdbr_vq <= x"12345678";
+        wait until rising_edge(i_clk);
+        i_cdbr_rq <= '0';
+        check(o_issue_we = '0', "should not try to issue right after cdb");
+        wait until rising_edge(i_clk);
+        check(o_issue_we = '1', "should try to issue after cdb request");
+        check_equal(o_issue_f3, FUNCT3_AND);
+        check_equal(o_issue_f7, std_logic_vector'(b"0000000"));
+        check_equal(o_issue_vj, std_logic_vector'(x"12345678"));
+        check_equal(o_issue_vk, std_logic_vector'(x"ABCDEF01"));
+        check_equal(o_issue_tq, std_logic_vector'(x"B"));
+        wait until rising_edge(i_clk);
+        check(o_issue_we = '1', "should still try to issue after cdb request");
+        i_issue_rdy <= '1';
+        wait until rising_edge(i_clk);
+        i_issue_rdy <= '0';
+        wait until rising_edge(i_clk);
+        check(o_issue_we = '0', "should not still try to issue after cdb request");
+
+      elsif run("VQ0_load") then
+        i_disp_we <= '1';
+        i_disp_op <= OP_LOAD;
+        i_disp_f3 <= FUNCT3_LBU;
+        i_disp_rj <= '1';
+        i_disp_rk <= '1';
+        wait until rising_edge(i_clk);
+        i_disp_we <= '0';
+        wait until rising_edge(i_clk);
+        check_equal(o_issue_f3, FUNCT3_ADDSUB);
+        check_equal(o_issue_f7, FUNCT7_ADD);
+
+      elsif run("VQ0_branch") then
+        i_disp_we <= '1';
+        i_disp_op <= OP_BRANCH;
+        i_disp_f3 <= FUNCT3_BGE;
+        i_disp_rj <= '1';
+        i_disp_rk <= '1';
+        wait until rising_edge(i_clk);
+        i_disp_we <= '0';
+        wait until rising_edge(i_clk);
+        check_equal(o_issue_f3, FUNCT3_SLT);
+        check_equal(o_issue_f7, std_logic_vector'("0000000"));
+
       end if;
+
     end loop;
+
+    wait until rising_edge(i_clk);
 
     test_runner_cleanup(runner);
   end process;

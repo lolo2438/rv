@@ -12,6 +12,17 @@ use work.cnst.all;
 
 package fnct is
 
+  --! \param x The input to verify
+  --! \return true when x is a temporary variable
+  --!         false when x is a full signal
+  --! \brief Check if x has attributes that can define it as a full variable
+  --!        or is the result of a temporary assignation.
+  --!        Example:
+  --!        signal a, b : std_logic_vector;
+  --!        fn(a and b) -> TRUE
+  --!        fn(a) -> FALSE
+  --pure function is_temp(x : std_ulogic_vector) return boolean;
+
   --! \param x The input value
   --! \return clog2(x)
   --! \brief Computes the clog2 of an integer
@@ -44,7 +55,7 @@ package fnct is
   --!
   --!                      3210
   --!        Descending: b"1010" -> b"11"
-  pure function priority_encoder(input : std_ulogic_vector) return std_ulogic_vector;
+  pure function priority_encoder(input : std_ulogic_vector; priority : type_priority := MSB) return std_ulogic_vector;
 
   --! \param input an input vector containing the bits to be reversed
   --! \return The reversed vector
@@ -63,6 +74,15 @@ end package;
 
 package body fnct is
 
+  --FIXME: does not work cuz of limitation in vhdl
+  --pure function is_temp(x : std_ulogic_vector) return boolean is
+  --begin
+  --  if x'left >= 0 or x'left < 0 then
+  --    return false;
+  --  end if;
+
+  --  return true;
+  --end function;
 
   --pure function init_mem_from_hex_file(file_name : in string) return std_logic_matrix
   --is
@@ -121,10 +141,14 @@ package body fnct is
     constant INVALID_RETURN : std_logic_vector(ENCODING_SIZE-1 downto 0) := (others => 'X');
     variable enc_out : std_logic_vector(ENCODING_SIZE-1 downto 0) := (others => '0');
   begin
+    assert input'left = input'left
+    report "COMMON.FNCT.ONE_HOT_ENCODER: specified input is a temporary signal, function may behave weirdly"
+    severity failure;
+
     if is_x(input) then
       assert NO_WARNING
-        report "COMMON.FNCT.ONE_HOT_ENCODER: metavalue detected, returning X"
-        severity warning;
+      report "COMMON.FNCT.ONE_HOT_ENCODER: metavalue detected, returning X"
+      severity warning;
 
       return INVALID_RETURN;
     end if;
@@ -153,6 +177,9 @@ package body fnct is
     constant RETURN_LENGTH : natural := clog2(input'length);
     constant INVALID_RETURN : std_ulogic_vector(RETURN_LENGTH-1 downto 0) := (others => 'X');
   begin
+    assert input'left = input'left
+    report "COMMON.FNCT.ONE_HOT_DECODER: specified input is a temporary signal, function may behave weirdly"
+    severity failure;
 
     if is_x(input) then
       assert NO_WARNING
@@ -174,12 +201,16 @@ package body fnct is
   end function;
 
 
-  pure function priority_encoder(input : std_ulogic_vector) return std_ulogic_vector is
+  pure function priority_encoder(input : std_ulogic_vector; priority : type_priority := MSB) return std_ulogic_vector is
     constant RETURN_LENGTH : natural := clog2(input'length);
     constant INVALID_RETURN : std_ulogic_vector(RETURN_LENGTH-1 downto 0) := (others => 'X');
     variable LEFT : natural;
     variable RIGHT : natural;
   begin
+    assert input'left = input'left
+    report "COMMON.FNCT.PRIORITY_ENCODER: specified input is a temporary signal, function may behave weirdly"
+    severity failure;
+
     if is_x(input) then
       assert NO_WARNING
         report "COMMON.FNCT.PRIORITY_ENCODER: metavalue detected, returning X"
@@ -196,11 +227,19 @@ package body fnct is
       LEFT := input'left;
     end if;
 
-    for i in LEFT downto RIGHT loop
-      if input(i) = '1' then
-        return std_ulogic_vector(to_unsigned(i, RETURN_LENGTH));
-      end if;
-    end loop;
+    if priority = MSB then
+      for i in LEFT downto RIGHT loop
+        if input(i) = '1' then
+          return std_ulogic_vector(to_unsigned(i, RETURN_LENGTH));
+        end if;
+      end loop;
+    else
+      for i in RIGHT to LEFT loop
+        if input(i) = '1' then
+          return std_ulogic_vector(to_unsigned(i, RETURN_LENGTH));
+        end if;
+      end loop;
+    end if;
 
     assert NO_WARNING
       report "COMMON.FNCT.PRIORITY_ENCODER: no encoding found, returning X"
@@ -213,13 +252,17 @@ package body fnct is
   pure function bit_reverse(input : std_ulogic_vector) return std_ulogic_vector is
     variable output : std_ulogic_vector(input'length-1 downto 0);
   begin
-      for i in input'range loop
-        if input'ascending then
-          output(i) := input(i);
-        else
-          output(i) := input(input'length-1-i);
-        end if;
-      end loop;
+    assert input'left = input'left
+    report "COMMON.FNCT.BIT_REVERSE: specified input is a temporary signal, function may behave weirdly"
+    severity failure;
+
+    for i in input'range loop
+      if input'ascending then
+        output(i) := input(i);
+      else
+        output(i) := input(input'length-1-i);
+      end if;
+    end loop;
 
     return output;
   end function;

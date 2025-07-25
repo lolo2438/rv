@@ -285,7 +285,7 @@ begin
 
   commit_rdy <= or commit_flags;
 
-  u_ldu_shed: entity hw.otm
+  u_ldu_shed: entity hw.dispatcher(age_fifo)
   generic map (
     RST_LEVEL => RST_LEVEL,
     ADDR_LEN  => LDU_LEN
@@ -300,8 +300,8 @@ begin
     i_re        => commit,
     i_wr_addr   => sched_wr_addr,
     i_rd_mask   => load_rdy,
-    o_rd_addr   => sched_rd_addr,
-    o_rd_rdy    => shed_rdy
+    o_rd_addr   => sched_rd_addr
+--    o_rd_rdy    => shed_rdy FIXME
   );
 
   issue_ptr <= unsigned(sched_rd_addr);

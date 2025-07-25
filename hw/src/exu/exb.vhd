@@ -86,8 +86,7 @@ architecture rtl of exb is
   signal rd_ptr : natural range 0 to EXB_SIZE-1;
   signal issue_ptr : std_logic_vector(EXB_LEN-1 downto 0);
 
-  signal op_rdy : std_logic_vector(EXB_LEN-1 downto 0);
-
+  signal op_rdy : std_logic_vector(EXB_SIZE-1 downto 0);
   signal busy : std_logic_vector(EXB_SIZE-1 downto 0);
 
   signal disp_we : std_logic;
@@ -95,7 +94,7 @@ architecture rtl of exb is
   signal full : std_logic;
   signal empty : std_logic;
 
-  signal otm_re : std_logic;
+  signal issue_we : std_logic;
 
 
 begin
@@ -199,7 +198,8 @@ begin
     end if;
   end process;
 
-  otm_re <= (not empty) and i_issue_rdy and (or op_rdy);
+  issue_we <= (or op_rdy);
+  issue_re <= i_issue_rdy and issue_we;
 
   rd_ptr <= to_integer(unsigned(issue_ptr));
 
@@ -223,7 +223,7 @@ begin
 
   empty <= nor busy;
 
-  u_otm : entity hw.otm
+  u_otm : entity hw.dispatcher(age_fifo)
   generic map(
     RST_LEVEL => RST_LEVEL,
     ADDR_LEN => EXB_LEN
@@ -235,11 +235,10 @@ begin
     o_empty     => open,
     o_full      => open,
     i_we        => disp_we,
-    i_re        => otm_re,
+    i_re        => issue_re,
     i_wr_addr   => disp_ptr,
     i_rd_mask   => op_rdy,
-    o_rd_addr   => issue_ptr,
-    o_rd_rdy    => issue_re
+    o_rd_addr   => issue_ptr
   );
 
 
@@ -249,14 +248,12 @@ begin
   o_empty <= empty;
   o_full <= full;
 
-  o_issue_we <= issue_re;
+  o_issue_we <= issue_we;
   o_issue_vj <= exb(rd_ptr).vj;
   o_issue_vk <= exb(rd_ptr).vk;
   o_issue_f3 <= exb(rd_ptr).f3;
   o_issue_f7 <= exb(rd_ptr).f7;
   o_issue_tq <= exb(rd_ptr).tq;
-
-
 
 end architecture;
 

@@ -7,6 +7,7 @@ context vunit_lib.vunit_context;
 
 library common;
 use common.fnct.all;
+use common.types.type_priority;
 
 entity common_lib_tb is
   generic (runner_cfg : string);
@@ -28,7 +29,7 @@ begin
         check_equal(clog2(16), 4);
         check_equal(clog2(256), 8);
 
-      elsif run("priority_encoder") then
+      elsif run("priority_encoder_msb") then
         std_ascend := "1010";
         check_equal(priority_encoder(std_ascend), std_logic_vector'("10"), "ASCEND, MSB=2");
 
@@ -46,6 +47,25 @@ begin
 
         std_descend := "0000";
         check_equal(priority_encoder(std_descend), std_logic_vector'("XX"));
+
+      elsif run("priority_encoder_lsb") then
+        std_ascend := "1010";
+        check_equal(priority_encoder(std_ascend, LSB), std_logic_vector'("00"), "ASCEND, LSB=0");
+
+        std_ascend := "0101";
+        check_equal(priority_encoder(std_ascend, LSB), std_logic_vector'("01"), "ASCEND, LSB=1");
+
+        std_descend := "1010";
+        check_equal(priority_encoder(std_descend, LSB), std_logic_vector'("01"), "DESCEND, LSB=2");
+
+        std_descend := "0101";
+        check_equal(priority_encoder(std_descend, LSB), std_logic_vector'("00"), "DESCEND, LSB=0");
+
+        std_ascend := "0000";
+        check_equal(priority_encoder(std_ascend, LSB), std_logic_vector'("XX"));
+
+        std_descend := "0000";
+        check_equal(priority_encoder(std_descend, LSB), std_logic_vector'("XX"));
 
       elsif run("bit_reverse") then
         std_ascend := "1000";
@@ -130,7 +150,6 @@ begin
 
         std_descend := "0110";
         check_equal(one_hot_decoder(std_descend), std_logic_vector'(b"XX"), "descend 0110");
-
       end if;
     end loop;
 

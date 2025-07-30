@@ -103,7 +103,7 @@ architecture rtl of ldu is
   type ldu_buf_t is array (0 to LDU_SIZE-1) of ldu_buf_field_t;
 
   signal ldu_entry  : ldu_buf_field_t;
-  signal ldu        : ldu_buf_t;
+  signal ldu_buf    : ldu_buf_t;
   signal disp_ptr   : unsigned(LDU_LEN-1 downto 0);
   signal issue_ptr  : unsigned(LDU_LEN-1 downto 0);
   signal load_rdy   : std_logic_vector(0 to LDU_SIZE-1);
@@ -136,8 +136,6 @@ architecture rtl of ldu is
   signal wb_data_f3 : std_logic_vector(2 downto 0);
   signal wb_data : std_logic_vector(XLEN-1 downto 0);
 
-  signal shed_rdy : std_logic;
-
   signal commit_rdy : std_logic;
 
 begin
@@ -147,11 +145,11 @@ begin
   ---
   load <= i_disp_load;
 
-  commit <= i_mem_wr_rdy and rd_grp_match and shed_rdy and commit_rdy;
+  commit <= i_mem_wr_rdy and rd_grp_match and commit_rdy;
 
   retire <= i_cdbw_ack and (or retire_flags);
 
-  wb_data_f3 <= ldu(to_integer(unsigned(i_mem_rd_qr))).f3;
+  wb_data_f3 <= ldu_buf(to_integer(unsigned(i_mem_rd_qr))).f3;
 
   -- TODO: Rethink about memory alignments
   with wb_data_f3 select
@@ -187,67 +185,67 @@ begin
   begin
     if i_arst = RST_LEVEL then
       for i in 0 to LDU_SIZE-1 loop
-        ldu(i).busy     <= '0';
-        ldu(i).commited <= '0';
-        ldu(i).done     <= '0';
+        ldu_buf(i).busy     <= '0';
+        ldu_buf(i).commited <= '0';
+        ldu_buf(i).done     <= '0';
       end loop;
     elsif rising_edge(i_clk) then
       if i_srst = RST_LEVEL then
         for i in 0 to LDU_SIZE-1 loop
-          ldu(i).busy     <= '0';
-          ldu(i).commited <= '0';
-          ldu(i).done     <= '0';
+          ldu_buf(i).busy     <= '0';
+          ldu_buf(i).commited <= '0';
+          ldu_buf(i).done     <= '0';
         end loop;
 
       else
         -- NEW ENTRY
         if dispatch = '1' then
-          ldu(to_integer(disp_ptr)) <= ldu_entry;
+          ldu_buf(to_integer(disp_ptr)) <= ldu_entry;
         end if;
 
         -- CDB WRITE BACK
         if i_cdbr_rq = '1' then
           for i in 0 to STU_SIZE-1 loop
-            if (ldu(i).busy      = '1' and
-                ldu(i).commited  = '0' and
-                ldu(i).addr_rdy  = '0' and
-                ldu(i).addr_tag  = i_cdbr_tq) then
+            if (ldu_buf(i).busy      = '1' and
+                ldu_buf(i).commited  = '0' and
+                ldu_buf(i).addr_rdy  = '0' and
+                ldu_buf(i).addr_tag  = i_cdbr_tq) then
 
-                ldu(i).addr     <= i_cdbr_vq;
-                ldu(i).addr_rdy <= '1';
+                ldu_buf(i).addr     <= i_cdbr_vq;
+                ldu_buf(i).addr_rdy <= '1';
             end if;
           end loop;
         end if;
 
         -- DATA WRITE BACK
         if i_mem_rd_valid = '1' then
-          ldu(to_integer(unsigned(i_mem_rd_qr))).data <= wb_data;
-          ldu(to_integer(unsigned(i_mem_rd_qr))).done <= '1';
+          ldu_buf(to_integer(unsigned(i_mem_rd_qr))).data <= wb_data;
+          ldu_buf(to_integer(unsigned(i_mem_rd_qr))).done <= '1';
         end if;
 
         -- ST DEPENDENCIES
         if i_stu_issue = '1' then
           for i in 0 to LDU_SIZE-1 loop
-            if ldu(i).st_dep(to_integer(unsigned(i_stu_addr))) = '1' and ldu(i).busy = '1' then
+            if ldu_buf(i).st_dep(to_integer(unsigned(i_stu_addr))) = '1' and ldu_buf(i).busy = '1' then
               -- check address
-              if ldu(i).addr_rdy = '1' and ldu(i).addr = i_stu_addr then
-                ldu(i).data <= i_stu_data;
-                ldu(i).done <= '1';
+              if ldu_buf(i).addr_rdy = '1' and ldu_buf(i).addr = i_stu_addr then
+                ldu_buf(i).data <= i_stu_data;
+                ldu_buf(i).done <= '1';
               end if;
 
-              ldu(i).st_dep(to_integer(unsigned(i_stu_addr))) <= '0';
+              ldu_buf(i).st_dep(to_integer(unsigned(i_stu_addr))) <= '0';
             end if;
           end loop;
         end if;
 
         -- LOAD SHEDULE
         if commit = '1' then
-          ldu(to_integer(issue_ptr)).commited <= '1';
+          ldu_buf(to_integer(issue_ptr)).commited <= '1';
         end if;
 
         -- LOAD RETIRE
         if retire = '1' then
-          ldu(to_integer(retire_ptr)).busy <= '0';
+          ldu_buf(to_integer(retire_ptr)).busy <= '0';
         end if;
       end if;
     end if;
@@ -256,19 +254,19 @@ begin
 
   g_flags:
   for i in 0 to LDU_SIZE-1 generate
-    busy_flags(i) <= ldu(i).busy;
-    dispatch_flags(i) <= not ldu(i).busy;
-    done_flags(i) <= ldu(i).done;
-    commit_flags(i) <= ldu(i).busy and not (ldu(i).commited or ldu(i).done);
-    retire_flags(i) <= ldu(i).busy and ldu(i).done;
-    grp_cmp_flags(i) <= '1' when ldu(i).grp = std_logic_vector(i_rd_grp) else '0';
-    load_rdy(i) <= ldu(i).busy and (not ldu(i).commited) and (not ldu(i).done) and grp_cmp_flags(i);
+    busy_flags(i) <= ldu_buf(i).busy;
+    dispatch_flags(i) <= not ldu_buf(i).busy;
+    done_flags(i) <= ldu_buf(i).busy and ldu_buf(i).done;
+    commit_flags(i) <= ldu_buf(i).busy and not (ldu_buf(i).commited or ldu_buf(i).done);
+    retire_flags(i) <= ldu_buf(i).busy and ldu_buf(i).done;
+    grp_cmp_flags(i) <= '1' when ldu_buf(i).grp = std_logic_vector(i_rd_grp) else '0';
+    load_rdy(i) <= ldu_buf(i).busy and (not ldu_buf(i).commited) and (not ldu_buf(i).done) and grp_cmp_flags(i);
   end generate;
 
 
   g_done_pairs:
   for i in 0 to LDU_SIZE-2 generate
-    ldu_done_pairs(i) <= ldu(i).done and ldu(i+1).done;
+    ldu_done_pairs(i) <= ldu_buf(i).done and ldu_buf(i+1).done;
   end generate;
   ldu_lh <= or ldu_done_pairs;
 
@@ -301,7 +299,6 @@ begin
     i_wr_addr   => sched_wr_addr,
     i_rd_mask   => load_rdy,
     o_rd_addr   => sched_rd_addr
---    o_rd_rdy    => shed_rdy FIXME
   );
 
   issue_ptr <= unsigned(sched_rd_addr);
@@ -311,7 +308,7 @@ begin
   ---
 
   o_mem_wr_valid   <= commit;
-  o_mem_wr_addr    <= ldu(to_integer(issue_ptr)).addr;
+  o_mem_wr_addr    <= ldu_buf(to_integer(issue_ptr)).addr;
   o_rd_grp_match   <= rd_grp_match;
   o_mem_wr_qr      <= std_logic_vector(issue_ptr);
 
@@ -320,8 +317,8 @@ begin
 
   o_cdbw_req      <= or done_flags;
   o_cdbw_lh       <= ldu_lh;
-  o_cdbw_vq       <= ldu(to_integer(retire_ptr)).data;
-  o_cdbw_tq       <= ldu(to_integer(retire_ptr)).data_tag;
+  o_cdbw_vq       <= ldu_buf(to_integer(retire_ptr)).data;
+  o_cdbw_tq       <= ldu_buf(to_integer(retire_ptr)).data_tag;
 
 end architecture;
 

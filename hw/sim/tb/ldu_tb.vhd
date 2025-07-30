@@ -128,7 +128,7 @@ begin
 
         i_cdbw_ack <= '0';
         wait until rising_edge(i_clk);
-        --check(o_cdbw_req = '0', "Should not have any request after ack");
+        check(o_cdbw_req = '0', "Should not have any request after ack");
 
       elsif run("VQ0_cdb_wr_load") then
       elsif run("VQ0_fence_load") then

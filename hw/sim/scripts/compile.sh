@@ -27,6 +27,6 @@ echo "Extract"
 riscv32-unknown-elf-objcopy -O binary -j .text $fn.elf $fn.bin
 
 echo "Create hex file"
-hexdump -ve '4/1 "%02x" "\n"' $fn.bin > $fn.hex
+hexdump -ve '4/1 "%02x" "\n"' $fn.bin | sed -E "s/(..)(..)(..)(..)/\4\3\2\1/" > $fn.hex
 
 echo "DONE"

@@ -222,7 +222,7 @@ begin
     i_rd_grp        => rd_grp,
     o_rd_grp_match  => ldu_rd_grp_match,
     i_stu_issue     => stu_issue,
-    i_stu_addr      => stu_issue_addr,
+    i_stu_addr      => stu_raddr,
     i_stu_data      => stu_issue_data,
     i_stu_dep       => stu_deps,
     i_mem_wr_rdy    => ldu_mem_wr_rdy,

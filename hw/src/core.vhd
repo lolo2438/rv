@@ -118,8 +118,8 @@ architecture rtl of core is
   signal exu_rk               : std_logic;
   signal exu_tq               : std_logic_vector(TAG_LEN-1 downto 0);
 
-  signal exb_empty            : std_logic;
-  signal exb_full             : std_logic;
+  signal exu_empty            : std_logic;
+  signal exu_full             : std_logic;
 
 
   ---
@@ -187,7 +187,7 @@ architecture rtl of core is
   signal cdbw_lsu : cdbw_sig;
 
   constant NB_CDB_INITIATOR : natural := 2;
-  signal cdbw_initiators : cdbw_array(clog2(NB_CDB_INITIATOR)-1 downto 0);
+  signal cdbw_initiators : cdbw_array(NB_CDB_INITIATOR-1 downto 0);
   signal cdbw_req : std_logic_vector(NB_CDB_INITIATOR-1 downto 0);
   signal cdbw_ack : std_logic_vector(NB_CDB_INITIATOR-1 downto 0);
 
@@ -230,8 +230,8 @@ begin
 
   disp_valid <= not disp_illegal;
 
-  sys_full <= ldu_full or stu_full or grp_full or exb_full or rob_full;
-  sys_empty <= ldu_empty or stu_empty or exb_empty or rob_empty;
+  sys_full <= ldu_full or stu_full or grp_full or exu_full or rob_full;
+  sys_empty <= ldu_empty or stu_empty or exu_empty or rob_empty;
 
   u_sys:
   entity hw.sys
@@ -324,15 +324,15 @@ begin
               --format_tag(UNIT_STU, stu_qr)
               (others => 'X') when others;
 
-  exu_vj_src <= '0' when disp_op = OP_OP or disp_op = OP_BRANCH else '1';
+  exu_vj_src <= '1' when disp_op = OP_AUIPC else '0';
 
-  exu_vj <= disp_imm         when exu_vj_src = '1' else rgu_vj;
+  exu_vj <= pc               when exu_vj_src = '1' else rgu_vj;
   exu_tj <= (others => 'X')  when exu_vj_src = '1' else rgu_tj;
   exu_rj <= '1'              when exu_vj_src = '1' else rgu_rj;
 
-  exu_vk_src <= '1' when disp_op = OP_AUIPC else '0';
+  exu_vk_src <= '0' when disp_op = OP_OP or disp_op = OP_BRANCH else '1';
 
-  exu_vk <= pc               when exu_vk_src = '1' else rgu_vk;
+  exu_vk <= disp_imm         when exu_vk_src = '1' else rgu_vk;
   exu_tk <= (others => 'X')  when exu_vk_src = '1' else rgu_tk;
   exu_rk <= '1'              when exu_vk_src = '1' else rgu_rk;
 
@@ -348,7 +348,8 @@ begin
     i_clk         => i_clk,
     i_srst        => i_srst,
     i_arst        => i_arst,
-    o_exb_full    => exb_full,
+    o_exu_full    => exu_full,
+    o_exu_empty   => exu_empty,
     i_disp_valid  => disp_valid,
     i_disp_op     => disp_op,
     i_disp_f3     => disp_f3,
@@ -442,7 +443,7 @@ begin
   cdbw_initiators(1) <= cdbw_lsu;
 
   g_cdbw_initiator_ctrl:
-  for i in 0 to NB_CDB_INITIATOR generate
+  for i in 0 to NB_CDB_INITIATOR-1 generate
     cdbw_req(i) <= cdbw_initiators(i).req;
     cdbw_initiators(i).ack <= cdbw_ack(i);
   end generate;

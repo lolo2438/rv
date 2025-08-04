@@ -15,7 +15,8 @@ entity exu is
     i_clk         : in  std_logic;
     i_srst        : in  std_logic;
     i_arst        : in  std_logic;
-    o_exb_full    : out std_logic;
+    o_exu_full    : out std_logic;
+    o_exu_empty   : out std_logic;
 
     -- DISPATCH I/F
     i_disp_valid  : in  std_logic;
@@ -48,8 +49,9 @@ end entity;
 architecture rtl of exu is
 
   -- CTRL
-  signal exb_full : std_logic;
-  signal exec_rdy : std_logic;
+  signal exb_full  : std_logic;
+  signal exb_empty : std_logic;
+  signal exec_rdy  : std_logic;
 
   -- ISSUE
   signal issue_vj     : std_logic_vector(XLEN-1 downto 0);
@@ -59,17 +61,32 @@ architecture rtl of exu is
   signal issue_tq     : std_logic_vector(TAG_LEN-1 downto 0);
   signal issue_valid  : std_logic;
 
-
   signal exec_result  : std_logic_vector(XLEN-1 downto 0);
   signal exec_tq      : std_logic_vector(TAG_LEN-1 downto 0);
   signal exec_done    : std_logic;
+
+  signal cdbw_req   : std_logic;
+  signal cdbw_tq    : std_logic_vector(TAG_LEN-1 downto 0);
+  signal cdbw_vq    : std_logic_vector(XLEN-1 downto 0);
+  signal cdbw_lh    : std_logic;
 
 begin
 
   ---
   -- INPUT
   ---
-  exec_rdy <= i_cdbw_ack or not exec_done;
+  -- FIXME: because exec_rdy = '0', exec_done can't be pipelined since issue_valid = 0
+  exec_rdy <= not (cdbw_req and i_cdbw_ack and exec_done);
+
+  --rad|e
+  --000|1
+  --001|1
+  --010|1
+  --011|1
+  --100|1
+  --101|0
+  --110|1
+  --111|1
 
   ---
   -- LOGIC
@@ -87,7 +104,7 @@ begin
     i_arst      => i_arst,
     i_srst      => i_srst,
     o_full      => exb_full,
-    o_empty     => open,
+    o_empty     => exb_empty,
     i_disp_we   => i_disp_valid,
     i_disp_op   => i_disp_op,
     i_disp_f3   => i_disp_f3,
@@ -112,7 +129,6 @@ begin
   );
 
 
-
   u_alu:
   entity hw.alu
   generic map(
@@ -132,14 +148,45 @@ begin
     o_done  => exec_done
   );
 
+
+  p_cdbw_handler:
+  process(i_clk)
+  begin
+    if rising_edge(i_clk) then
+      if i_srst = RST_LEVEL then
+        cdbw_req <= '0';
+      else
+        if cdbw_req = '0' then
+          if exec_done = '1' then
+            cdbw_req <= '1';
+          end if;
+
+        elsif cdbw_req = '1' then
+          if i_cdbw_ack = '1' then
+            cdbw_vq <= exec_result;
+            cdbw_tq <= exec_tq;
+
+            if exec_done = '0' then
+              cdbw_req <= '0';
+            end if;
+          end if;
+
+        end if;
+      end if;
+    end if;
+  end process;
+
+  cdbw_lh <= exec_done and cdbw_req;
+
   ---
   -- OUTPUT
   ---
-  o_exb_full  <= exb_full;
+  o_exu_full  <= exb_full;
+  o_exu_empty <= exb_empty;
 
-  o_cdbw_vq   <= exec_result;
-  o_cdbw_tq   <= exec_tq;
-  o_cdbw_req  <= exec_done;
-  o_cdbw_lh   <= exec_done and issue_valid and exec_rdy;
+  o_cdbw_vq   <= cdbw_vq;
+  o_cdbw_tq   <= cdbw_tq;
+  o_cdbw_req  <= cdbw_req;
+  o_cdbw_lh   <= cdbw_lh;
 
 end architecture;

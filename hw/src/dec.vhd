@@ -143,65 +143,70 @@ begin
     valid <= '0';
 
     -- RV32I, add other size here
-    case op is
-      when OP_OP =>
-        if f7 = "0000000" or f7 = "0100000" then
-          valid <= '1';
-        end if;
-
-      when OP_IMM =>
-        if f3 = FUNCT3_SL then
-          if f7 = "0000000" then
+    if q = "11" then
+      case op is
+        when OP_OP =>
+          if f7 = "0000000" or f7 = "0100000" then
             valid <= '1';
           end if;
-        elsif f3 = FUNCT3_SR then
-          if f7 = FUNCT7_SRL or f7 = FUNCT7_SRA then
+
+        when OP_IMM =>
+          if f3 = FUNCT3_SL then
+            if f7 = "0000000" then
+              valid <= '1';
+            end if;
+          elsif f3 = FUNCT3_SR then
+            if f7 = FUNCT7_SRL or f7 = FUNCT7_SRA then
+              valid <= '1';
+            end if;
+          else
             valid <= '1';
           end if;
-        end if;
 
-      when OP_JALR =>
-        if f3 = "000" then
+        when OP_JALR =>
+          if f3 = "000" then
+            valid <= '1';
+          end if;
+
+        when OP_LUI | OP_AUIPC | OP_JAL =>
           valid <= '1';
-        end if;
 
-      when OP_LUI | OP_AUIPC | OP_JAL => valid <= '1';
+        when OP_BRANCH =>
+          if not(f3 = "010" or f3 = "011") then
+            valid <= '1';
+          end if;
 
-      when OP_BRANCH =>
-        if not(f3 = "010" or f3 = "011") then
-          valid <= '1';
-        end if;
+        when OP_STORE =>
+          if f3 = "000" or f3 = "001" or f3 = "010" then
+            valid <= '1';
+          end if;
 
-      when OP_STORE =>
-        if f3 = "000" or f3 = "001" or f3 = "010" then
-          valid <= '1';
-        end if;
+        when OP_LOAD =>
+          if not ( f3 = "011" or f3 = "110" or f3 = "111") then
+            valid <= '1';
+          end if;
 
-      when OP_LOAD =>
-        if not ( f3 = "011" or f3 = "110" or f3 = "111") then
-          valid <= '1';
-        end if;
+        -- NOTE: At the moment, misc-mem RS1 & RD are to be IGNORED by specification for foward-compatibility
+        when OP_MISC_MEM =>
+          if f3 = "000" then
+            valid <= '1';
+          end if;
 
-      -- NOTE: At the moment, misc-mem RS1 & RD are to be IGNORED by specification for foward-compatibility
-      when OP_MISC_MEM =>
-        if f3 = "000" then
-          valid <= '1';
-        end if;
+        when OP_SYSTEM =>
+          if f12 = x"000" or f12 = x"001" then
+            valid <= '1';
+          end if;
 
-      when OP_SYSTEM =>
-        if f12 = x"000" or f12 = x"001" then
-          valid <= '1';
-        end if;
+        when others => -- Add extensions here
+      end case;
 
-      when others => -- Add extensions here
-    end case;
+    else -- TODO: C Extension add execption here
 
-    if q /= "11" then -- TODO: C Extension add execption here
-      valid <= '0';
     end if;
+
   end process;
 
-  o_illegal <= (not valid) and i_inst_disp;
+  o_illegal <= valid nand i_inst_disp;
 
 
   ---

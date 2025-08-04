@@ -72,7 +72,6 @@ architecture tb of core_tb is
   signal tb_dmem_wdata      : std_logic_vector(DMEM_DATA_WIDTH-1 downto 0);
 
   signal tb_dmem_raddr      : std_logic_vector(DMEM_ADDR_WIDTH-1 downto 0);
-  signal tb_dmem_rdata      : std_logic_vector(DMEM_DATA_WIDTH-1 downto 0);
 
   signal core_dmem_rrdy     : std_logic;
   signal core_dmem_rdvalid  : std_logic;
@@ -233,7 +232,7 @@ begin
 
     while test_suite loop
       if run("basic_program") then
-        imem_load_program("test_code/basic_program.hex");
+        imem_load_program("code/basic_program.hex");
         run_program;
       elsif run("test2") then
       end if;
@@ -248,9 +247,8 @@ begin
 
   imem_en   <= (not core_stalled and core_en and core_imem_avalid) or tb_imem_sel;
   imem_we   <= tb_imem_we   when tb_imem_sel = '1' else (others => '0');
-  imem_addr <= tb_imem_addr when tb_imem_sel = '1' else core_imem_addr(IMEM_ADDR_WIDTH-1 downto 0);
+  imem_addr <= tb_imem_addr when tb_imem_sel = '1' else core_imem_addr(IMEM_ADDR_WIDTH-1+2 downto 2);
   imem_wdata <= tb_imem_wdata;
-  imem_rdata <= core_imem_rdata;
 
   u_imem:
   entity hw.spmem
@@ -268,14 +266,13 @@ begin
   );
 
   core_imem_rdy    <= not tb_imem_sel;
-  core_imem_dvalid <= imem_en when rising_edge(core_clk);
+  core_imem_dvalid <= imem_en;
 
   dmem_en    <= (not core_stalled and core_en and (core_dmem_wvalid or core_dmem_ravalid)) or tb_dmem_sel;
   dmem_we    <= tb_dmem_we    when tb_dmem_sel = '1' else core_dmem_we;
-  dmem_waddr <= tb_dmem_waddr when tb_dmem_sel = '1' else core_dmem_waddr(DMEM_ADDR_WIDTH-1 downto 0);
+  dmem_waddr <= tb_dmem_waddr when tb_dmem_sel = '1' else core_dmem_waddr(DMEM_ADDR_WIDTH-1+2 downto 2);
   dmem_wdata <= tb_dmem_wdata when tb_dmem_sel = '1' else core_dmem_wdata;
-  dmem_raddr <= tb_dmem_raddr when tb_dmem_sel = '1' else core_dmem_raddr(DMEM_ADDR_WIDTH-1 downto 0);
-  dmem_rdata <= tb_dmem_rdata when tb_dmem_sel = '1' else core_dmem_rdata;
+  dmem_raddr <= tb_dmem_raddr when tb_dmem_sel = '1' else core_dmem_raddr(DMEM_ADDR_WIDTH-1+2 downto 2);
 
   u_dmem:
   entity hw.dpmem
@@ -296,6 +293,9 @@ begin
   core_dmem_rrdy <= not tb_dmem_sel;
   core_dmem_wrdy <= not tb_dmem_sel;
   core_dmem_rdvalid <= dmem_en when rising_edge(core_clk);
+  core_dmem_rdata <= dmem_rdata;
+
+  core_imem_rdata <= imem_rdata;
 
   u_dut:
   entity hw.core

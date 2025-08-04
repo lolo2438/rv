@@ -1,4 +1,4 @@
-hw/test/vunit_out/*
+hw/sim/vunit_out/*
 *.hex
 *.bin
 *.elf

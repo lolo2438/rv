@@ -37,16 +37,15 @@ begin
   begin
     if rising_edge(i_clk) then
       if i_en = '1' then
-
         for i in 0 to i_we'length-1 loop
           if i_we(i) = '1' then
             mem(to_integer(unsigned(i_addr)))((i+1)*8-1 downto i*8) <= i_data((i+1)*8-1 downto i*8);
           end if;
         end loop;
-
-        o_data <= mem(to_integer(unsigned(i_addr)));
       end if;
     end if;
   end process;
+
+  o_data <= mem(to_integer(unsigned(i_addr)));
 
 end architecture rtl;

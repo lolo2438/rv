@@ -1,4 +1,4 @@
-VeXon : RISC-V, Perfected
+RISC-V
 
 https://ideas.fandom.com/wiki/Vexon
 

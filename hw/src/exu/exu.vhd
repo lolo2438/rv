@@ -159,15 +159,18 @@ begin
         if cdbw_req = '0' then
           if exec_done = '1' then
             cdbw_req <= '1';
+
+            cdbw_vq <= exec_result;
+            cdbw_tq <= exec_tq;
           end if;
 
         elsif cdbw_req = '1' then
           if i_cdbw_ack = '1' then
-            cdbw_vq <= exec_result;
-            cdbw_tq <= exec_tq;
-
             if exec_done = '0' then
               cdbw_req <= '0';
+            else
+              cdbw_vq <= exec_result;
+              cdbw_tq <= exec_tq;
             end if;
           end if;
 

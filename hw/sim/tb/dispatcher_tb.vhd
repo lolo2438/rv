@@ -43,6 +43,8 @@ begin
     variable result_table : std_logic_matrix(0 to 2**ADDR_LEN-1)(ADDR_LEN-1 downto 0);
   begin
     test_runner_setup(runner, runner_cfg);
+    set_stop_level(failure);
+
 
     while test_suite loop
 
@@ -50,10 +52,10 @@ begin
       i_srst <= RST_LEVEL;
       wait until rising_edge(i_clk);
       i_srst <= not RST_LEVEL;
-      wait until rising_edge(i_clk);
 
       -- Run Tests
       if run("V0_4x4_write_read") then
+        wait until rising_edge(i_clk);
         check(o_empty = '1', "Should be empty at begining");
         check(o_full = '0', "Should not be full at begining");
 
@@ -76,7 +78,7 @@ begin
         i_we <= '0';
         -- Read
         i_re <= '1';
-        i_rd_mask <= x"A";
+        i_rd_mask <= x"5";
         for i in 0 to 2**ADDR_LEN-1 loop
           wait until rising_edge(i_clk);
           check(o_empty = '0', "Should not be empty when reading");
@@ -124,6 +126,60 @@ begin
         wait until rising_edge(i_clk);
         check_equal(o_rd_addr, std_logic_vector'("10"));
 
+      elsif run("VQ1_typical_operation") then
+
+        i_we <= '1';
+
+        i_wr_addr <= "00";
+        i_rd_mask <= (others => '0');
+        wait until rising_edge(i_clk); -- 0
+
+        i_wr_addr <= "01";
+        i_rd_mask <= "0001";
+        i_re <= '1';
+        wait until rising_edge(i_clk); -- 1
+
+        i_wr_addr <= "00";
+        i_rd_mask <= "0000";
+        i_re <= '0';
+        wait until rising_edge(i_clk); -- 2
+
+        i_wr_addr <= "10";
+        i_rd_mask <= "0010";
+        i_re <= '1';
+        wait until rising_edge(i_clk); -- 3
+        check_equal(o_rd_addr, std_logic_vector'("00"));
+
+        i_wr_addr <= "01";
+        i_rd_mask <= "0000";
+        i_re <= '0';
+        wait until rising_edge(i_clk); -- 4
+
+        i_wr_addr <= "11";
+        i_rd_mask <= "1100";
+        i_re <= '1';
+        wait until rising_edge(i_clk); -- 5
+        check_equal(o_rd_addr, std_logic_vector'("01"));
+
+        i_we <= '0';
+        i_rd_mask <= "1001";
+        wait until rising_edge(i_clk); -- 6
+
+        i_rd_mask <= "1000";
+        wait until rising_edge(i_clk); --7
+        check_equal(o_rd_addr, std_logic_vector'("10"));
+
+        i_rd_mask <= "0010";
+        wait until rising_edge(i_clk); -- 8
+        check_equal(o_rd_addr, std_logic_vector'("00"));
+
+        i_rd_mask <= "0000";
+        wait until rising_edge(i_clk); -- 9
+        check_equal(o_rd_addr, std_logic_vector'("11"));
+
+        wait until rising_edge(i_clk); -- 10
+        check_equal(o_rd_addr, std_logic_vector'("01"));
+
 
       --elsif run("V1_32x32_write_read") then
       --elsif run("V1_32x32_write_and_read") then
@@ -135,12 +191,11 @@ begin
       end if;
     end loop;
 
-
     test_runner_cleanup(runner);
   end process;
 
 
-  DUT: entity hw.dispatcher(age_fifo)
+  DUT: entity hw.dispatcher(age_matrix)
   generic map( RST_LEVEL => RST_LEVEL,
                ADDR_LEN => ADDR_LEN
   )

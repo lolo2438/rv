@@ -8,8 +8,8 @@ use riscv.RV32I.all;
 library hw;
 
 library common;
-use common.fnct.priority_encoder;
-use common.fnct.bit_reverse;
+use common.fnct.all;
+use common.types.all;
 
 entity exb is
   generic(
@@ -77,7 +77,7 @@ architecture rtl of exb is
 
   type exb_buf_t is array (0 to EXB_SIZE-1) of exb_entry_t;
 
-  signal exb : exb_buf_t;
+  signal exb_buf : exb_buf_t;
   signal exb_entry : exb_entry_t;
 
   signal wr_ptr : natural range 0 to EXB_SIZE-1;
@@ -88,6 +88,7 @@ architecture rtl of exb is
 
   signal op_rdy : std_logic_vector(EXB_SIZE-1 downto 0);
   signal busy : std_logic_vector(EXB_SIZE-1 downto 0);
+  signal disp_rdy : std_logic_vector(EXB_SIZE-1 downto 0);
 
   signal disp_we : std_logic;
   signal issue_re : std_logic;
@@ -153,7 +154,8 @@ begin
   -- LOGIC
   ---
   disp_we <= not full and i_disp_we;
-  disp_ptr <= priority_encoder(bit_reverse(busy));
+  disp_rdy <= not busy;
+  disp_ptr <= priority_encoder(disp_rdy, LSB);
 
   wr_ptr <= to_integer(unsigned(disp_ptr));
 
@@ -162,33 +164,33 @@ begin
   begin
     if i_arst = RST_LEVEL then
       for i in 0 to EXB_SIZE-1 loop
-        exb(i).busy <= '0';
+        exb_buf(i).busy <= '0';
       end loop;
     elsif rising_edge(i_clk) then
       if i_srst = RST_LEVEL then
         for i in 0 to EXB_SIZE-1 loop
-          exb(i).busy <= '0';
+          exb_buf(i).busy <= '0';
         end loop;
       else
         if issue_re = '1' then
-          exb(rd_ptr).busy <= '0';
+          exb_buf(rd_ptr).busy <= '0';
         end if;
 
         if disp_we = '1' then
-          exb(wr_ptr) <= exb_entry;
+          exb_buf(wr_ptr) <= exb_entry;
         end if;
 
         if i_cdbr_rq = '1' then
           for i in 0 to EXB_SIZE-1 loop
-            if exb(i).busy = '1' then
-              if exb(i).rj = '0' and exb(i).tj = i_cdbr_tq then
-                exb(i).rj <= '1';
-                exb(i).vj <= i_cdbr_vq;
+            if exb_buf(i).busy = '1' then
+              if exb_buf(i).rj = '0' and exb_buf(i).tj = i_cdbr_tq then
+                exb_buf(i).rj <= '1';
+                exb_buf(i).vj <= i_cdbr_vq;
               end if;
 
-              if exb(i).rk = '0' and exb(i).tk = i_cdbr_tq then
-                exb(i).rk <= '1';
-                exb(i).vk <= i_cdbr_vq;
+              if exb_buf(i).rk = '0' and exb_buf(i).tk = i_cdbr_tq then
+                exb_buf(i).rk <= '1';
+                exb_buf(i).vk <= i_cdbr_vq;
               end if;
             end if;
           end loop;
@@ -207,7 +209,7 @@ begin
   process(all)
   begin
     for i in 0 to EXB_SIZE-1 loop
-      op_rdy(i) <= exb(i).rj and exb(i).rk and exb(i).busy;
+      op_rdy(i) <= exb_buf(i).rj and exb_buf(i).rk and exb_buf(i).busy;
     end loop;
   end process;
 
@@ -215,7 +217,7 @@ begin
   process(all)
   begin
     for i in 0 to EXB_SIZE-1 loop
-      busy(i) <= exb(i).busy;
+      busy(i) <= exb_buf(i).busy;
     end loop;
   end process;
 
@@ -249,11 +251,11 @@ begin
   o_full <= full;
 
   o_issue_we <= issue_we;
-  o_issue_vj <= exb(rd_ptr).vj;
-  o_issue_vk <= exb(rd_ptr).vk;
-  o_issue_f3 <= exb(rd_ptr).f3;
-  o_issue_f7 <= exb(rd_ptr).f7;
-  o_issue_tq <= exb(rd_ptr).tq;
+  o_issue_vj <= exb_buf(rd_ptr).vj;
+  o_issue_vk <= exb_buf(rd_ptr).vk;
+  o_issue_f3 <= exb_buf(rd_ptr).f3;
+  o_issue_f7 <= exb_buf(rd_ptr).f7;
+  o_issue_tq <= exb_buf(rd_ptr).tq;
 
 end architecture;
 

@@ -157,7 +157,7 @@ begin
 
   clk_gen(core_clk, 100.0e6);
 
-  test_runner_watchdog(runner, 100 us);
+  test_runner_watchdog(runner, 10 us);
 
   ---
   -- MAIN PROCESS

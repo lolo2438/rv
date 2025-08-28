@@ -15,3 +15,6 @@ Versioned docs: MkDocs versionning plugin, Docusaurus
 3. Fix Nvim MarkDown
 4. Try mkdocs-materials
 5. integrate diagrams
+
+This looks good for diagrams
+https://schemdraw.readthedocs.io/en/stable/index.html

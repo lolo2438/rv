@@ -20,6 +20,7 @@ entity rgu is
     i_srst        : in  std_logic;
     i_arst        : in  std_logic;
     o_rob_full    : out std_logic;
+    o_rob_empty   : out std_logic;
 
     -- DISPATCH I/F
     i_disp_valid  : in  std_logic;
@@ -75,6 +76,7 @@ architecture rtl of rgu is
   signal rob_result   : std_logic_vector(XLEN-1 downto 0);
 
   signal rob_full     : std_logic;
+  signal rob_empty    : std_logic;
 
   signal vj, vk       : std_logic_vector(XLEN-1 downto 0);
   signal tj, tk       : std_logic_vector(TAG_LEN-1 downto 0);
@@ -142,6 +144,7 @@ begin
     i_srst          => i_srst,
     i_flush         => '0',
     o_full          => rob_full,
+    o_empty         => rob_empty,
     i_disp_rob      => disp_we,
     i_disp_rd       => i_disp_rd,
     o_disp_qr       => rob_disp_qr,
@@ -178,6 +181,7 @@ begin
   -- OUTPUT
   ---
   o_rob_full <= rob_full;
+  o_rob_empty <= rob_empty;
 
   o_disp_tq <= tag_format(UNIT_RGU_ROB, rob_disp_qr);
 

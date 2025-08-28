@@ -191,6 +191,19 @@ architecture rtl of core is
   signal cdbw_req : std_logic_vector(NB_CDB_INITIATOR-1 downto 0);
   signal cdbw_ack : std_logic_vector(NB_CDB_INITIATOR-1 downto 0);
 
+  --procedure connect_cdbw_client(
+  --    signal client : inout cdbw_sig;
+  --    signal host   : inout cdbw_sig
+  --  ) is
+  --begin
+  --  host.vq <= client.vq;
+  --  host.tq <= client.tq;
+  --  host.req <= client.req;
+  --  host.lh <= client.lh;
+
+  --  client.ack <= host.ack;
+  --end procedure;
+
 
 begin
 
@@ -272,6 +285,7 @@ begin
     i_srst        => i_srst,
     i_arst        => i_arst,
     o_rob_full    => rob_full,
+    o_rob_empty   => rob_empty,
     i_disp_valid  => disp_valid,
     i_disp_op     => disp_op,
     i_disp_rs1    => disp_rs1,
@@ -439,8 +453,20 @@ begin
   ---
   -- CDB
   ---
-  cdbw_initiators(0) <= cdbw_exu;
-  cdbw_initiators(1) <= cdbw_lsu;
+  --connect_cdbw_client(cdbw_exu, cdbw_initiators(0));
+  --connect_cdbw_client(cdbw_lsu, cdbw_initiators(1));
+
+  cdbw_initiators(0).vq  <= cdbw_exu.vq;
+  cdbw_initiators(0).tq  <= cdbw_exu.tq;
+  cdbw_initiators(0).req <= cdbw_exu.req;
+  cdbw_initiators(0).lh  <= cdbw_exu.lh;
+  cdbw_exu.ack <= cdbw_initiators(0).ack;
+
+  cdbw_initiators(1).vq  <= cdbw_lsu.vq;
+  cdbw_initiators(1).tq  <= cdbw_lsu.tq;
+  cdbw_initiators(1).req <= cdbw_lsu.req;
+  cdbw_initiators(1).lh  <= cdbw_lsu.lh;
+  cdbw_lsu.ack <= cdbw_initiators(1).ack;
 
   g_cdbw_initiator_ctrl:
   for i in 0 to NB_CDB_INITIATOR-1 generate

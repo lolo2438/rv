@@ -175,6 +175,126 @@ begin
         check_equal(o_issue_f3, FUNCT3_SLT);
         check_equal(o_issue_f7, std_logic_vector'("0000000"));
 
+      elsif run("VQ1_normal_operation") then
+        i_issue_rdy <= '1';
+        i_disp_we <= '1';
+
+        i_disp_op <= OP_OP;
+        i_disp_f3 <= FUNCT3_ADDSUB;
+        i_disp_f7 <= FUNCT7_ADD;
+
+        i_disp_rj <= '1';
+        i_disp_tj <= (others => 'X');
+        i_disp_vj <= x"AABBCCDD";
+
+        i_disp_rk <= '1';
+        i_disp_tk <= (others => 'X');
+        i_disp_vk <= x"BBCCDDEE";
+
+        i_disp_tq <= x"0";
+
+        wait until rising_edge(i_clk);
+        i_disp_op <= OP_OP;
+        i_disp_f3 <= FUNCT3_SL;
+        i_disp_f7 <= FUNCT7_SLL;
+
+        i_disp_rj <= '0';
+        i_disp_tj <= x"0";
+        i_disp_vj <= (others => 'X');
+
+        i_disp_rk <= '1';
+        i_disp_tq <= (others => 'X');
+        i_disp_vj <= x"00000004";
+
+        i_disp_tq <= x"1";
+
+        wait until rising_edge(i_clk);
+        check(o_issue_we = '1', "Should issue first operation");
+        check_equal(o_issue_f3, FUNCT3_ADDSUB);
+        check_equal(o_issue_f7, FUNCT7_ADD);
+        check_equal(o_issue_vj, std_logic_vector'(x"AABBCCDD"));
+        check_equal(o_issue_vk, std_logic_vector'(x"BBCCDDEE"));
+        check_equal(o_issue_tq, std_logic_vector'(x"0"));
+
+        i_disp_op <= OP_OP;
+        i_disp_f3 <= FUNCT3_AND;
+        i_disp_f7 <= (others => '0');
+
+        i_disp_rj <= '0';
+        i_disp_tj <= x"0";
+        i_disp_vj <= (others => 'X');
+
+        i_disp_rk <= '0';
+        i_disp_tk <= x"1";
+        i_disp_vj <= (others => 'X');
+
+        i_disp_tq <= x"2";
+
+        wait until rising_edge(i_clk);
+        check(o_issue_we = '0', "Should no longer issue first operation");
+
+        i_disp_op <= OP_BRANCH;
+        i_disp_f3 <= FUNCT3_BEQ;
+        i_disp_f7 <= (others => 'X');
+
+        i_disp_rj <= '1';
+        i_disp_tj <= (others => 'X');
+        i_disp_vj <= x"ABCDEF01";
+
+        i_disp_rk <= '0';
+        i_disp_tk <= x"1";
+        i_disp_vj <= (others => 'X');
+
+        i_disp_tq <= x"3";
+
+        i_cdbr_rq <= '0';
+        i_cdbr_tq <= (others => 'X');
+        i_cdbr_vq <= (others => 'X');
+
+        -- AABBCCDD + BBCCDDEE
+        i_cdbr_rq <= '1';
+        i_cdbr_tq <= x"0";
+        i_cdbr_vq <= x"6688AACB";
+
+        wait until rising_edge(i_clk);
+        check(o_issue_we = '0', "Should not issue since propagating operation");
+
+        i_disp_we <= '0';
+        i_cdbr_rq <= '0';
+
+        wait until rising_edge(i_clk);
+        check(o_issue_we = '1', "Should issue the second operation");
+        check_equal(o_issue_f3, FUNCT3_SL);
+        check_equal(o_issue_f7, FUNCT7_SLL);
+        check_equal(o_issue_vj, std_logic_vector'(x"6688AACB"));
+        check_equal(o_issue_vk, std_logic_vector'(x"00000004"));
+        check_equal(o_issue_tq, std_logic_vector'(x"1"));
+
+        i_cdbr_rq <= '1';
+        i_cdbr_tq <= x"1";
+        i_cdbr_vq <= x"688AACB0";
+
+        wait until rising_edge(i_clk);
+        check(o_issue_we = '0', "Should no longer issue the second operation");
+
+        i_cdbr_rq <= '0';
+
+        wait until rising_edge(i_clk);
+        check(o_issue_we = '1', "Should issue the third operation");
+        check_equal(o_issue_f3, FUNCT3_AND);
+        check_equal(o_issue_f7, std_logic_vector'(b"0000000"));
+        check_equal(o_issue_vj, std_logic_vector'(x"6688AACB"));
+        check_equal(o_issue_vk, std_logic_vector'(x"688AACB0"));
+        check_equal(o_issue_tq, std_logic_vector'(x"2"));
+
+        wait until rising_edge(i_clk);
+        check(o_issue_we = '1', "Should issue the fourth operation");
+        check_equal(o_issue_f3, FUNCT3_ADDSUB);
+        check_equal(o_issue_f7, FUNCT7_SUB);
+        check_equal(o_issue_vj, std_logic_vector'(x"ABCDEF01"));
+        check_equal(o_issue_vk, std_logic_vector'(x"688AACB0"));
+        check_equal(o_issue_tq, std_logic_vector'(x"3"));
+
       end if;
 
     end loop;

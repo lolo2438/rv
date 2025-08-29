@@ -108,21 +108,24 @@ begin
         -- [ XX XX 11 01 ]
 
         i_re <= '1';
-        i_rd_mask <= x"2";
+        i_rd_mask <= b"1010";
         i_wr_addr <= "00";
         wait until rising_edge(i_clk);
-        check_equal(o_rd_addr, std_logic_vector'("11"));
+        check_equal(o_rd_addr, std_logic_vector'("01"));
         -- [ XX XX 00 01 ]
 
         i_wr_addr <= "10";
+        i_rd_mask <= b"1001";
         wait until rising_edge(i_clk);
-        check_equal(o_rd_addr, std_logic_vector'("00"));
+        check_equal(o_rd_addr, std_logic_vector'("11"));
         -- [ XX XX 10 01 ]
         i_we <= '0';
-        i_rd_mask <= x"1";
+        i_rd_mask <= b"0001";
         wait until rising_edge(i_clk);
-        check_equal(o_rd_addr, std_logic_vector'("01"));
+        check_equal(o_rd_addr, std_logic_vector'("00"));
         -- [ XX XX Xx 10 ]
+
+        i_rd_mask <= b"0100";
         wait until rising_edge(i_clk);
         check_equal(o_rd_addr, std_logic_vector'("10"));
 
@@ -138,6 +141,7 @@ begin
         i_rd_mask <= "0001";
         i_re <= '1';
         wait until rising_edge(i_clk); -- 1
+        check_equal(o_rd_addr, std_logic_vector'("00"));
 
         i_wr_addr <= "00";
         i_rd_mask <= "0000";
@@ -148,7 +152,7 @@ begin
         i_rd_mask <= "0010";
         i_re <= '1';
         wait until rising_edge(i_clk); -- 3
-        check_equal(o_rd_addr, std_logic_vector'("00"));
+        check_equal(o_rd_addr, std_logic_vector'("01"));
 
         i_wr_addr <= "01";
         i_rd_mask <= "0000";
@@ -156,29 +160,26 @@ begin
         wait until rising_edge(i_clk); -- 4
 
         i_wr_addr <= "11";
-        i_rd_mask <= "1100";
+        i_rd_mask <= "0100";
         i_re <= '1';
         wait until rising_edge(i_clk); -- 5
-        check_equal(o_rd_addr, std_logic_vector'("01"));
+        check_equal(o_rd_addr, std_logic_vector'("10"));
 
         i_we <= '0';
         i_rd_mask <= "1001";
         wait until rising_edge(i_clk); -- 6
+        check_equal(o_rd_addr, std_logic_vector'("00"));
 
         i_rd_mask <= "1000";
         wait until rising_edge(i_clk); --7
-        check_equal(o_rd_addr, std_logic_vector'("10"));
+        check_equal(o_rd_addr, std_logic_vector'("11"));
 
         i_rd_mask <= "0010";
         wait until rising_edge(i_clk); -- 8
-        check_equal(o_rd_addr, std_logic_vector'("00"));
+        check_equal(o_rd_addr, std_logic_vector'("01"));
 
         i_rd_mask <= "0000";
         wait until rising_edge(i_clk); -- 9
-        check_equal(o_rd_addr, std_logic_vector'("11"));
-
-        wait until rising_edge(i_clk); -- 10
-        check_equal(o_rd_addr, std_logic_vector'("01"));
 
 
       --elsif run("V1_32x32_write_read") then

@@ -283,7 +283,7 @@ begin
 
   commit_rdy <= or commit_flags;
 
-  u_ldu_shed: entity hw.dispatcher(age_fifo)
+  u_ldu_shed: entity hw.dispatcher(age_matrix)
   generic map (
     RST_LEVEL => RST_LEVEL,
     ADDR_LEN  => LDU_LEN

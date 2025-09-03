@@ -25,147 +25,6 @@ entity dispatcher is
   );
 end entity;
 
--- TODO: do a age_fifo_rtl and compare results in vivado synthesis
-architecture age_fifo of dispatcher is
-
-  constant ADDR_SIZE : natural := 2**ADDR_LEN;
-
-  signal age_fifo : std_logic_matrix(0 to ADDR_SIZE-1)(ADDR_LEN-1 downto 0);
-
-  signal wr_sel_d : std_logic_vector(ADDR_SIZE downto 0);
-  signal wr_sel_q : std_logic_vector(ADDR_SIZE downto 0);
-  signal rd_sel : std_logic_vector(ADDR_SIZE-1 downto 0);
-  signal shift_en : std_logic_vector(ADDR_SIZE-2 downto 0);
-
-  signal rd_ptr  : std_logic_vector(ADDR_LEN-1 downto 0);
-
-  signal empty : std_logic;
-  signal full : std_logic;
-
-  signal we : std_logic;
-  signal re : std_logic;
-
-begin
-
-  ---
-  -- INPUT
-  ---
-  we <= i_we and not full;
-  re <= i_re and not empty;
-
-  --FIXME: The issue with the age_fifo is that the data must be compared, which
-  -- Resolve at building a matrix of "equal" to match the correct index to the correct data
-  -- In a sense, it's better to just go with a matrix before as it will reduce the datapath
-  -- Compared here to adding multiple logic levels
-  --
-  -- Note: fix the downto/to and priority enc LSB/MSB, it should in theory work but not tested
-  p_rd_ptr:
-  process(i_rd_mask, age_fifo)
-    variable cmp_matrix : std_logic_matrix(ADDR_SIZE-1 downto 0)(ADDR_SIZE-1 downto 0);
-    variable cmp_matrix_col : std_logic_vector(ADDR_SIZE-1 downto 0);
-  begin
-    for i in 0 to ADDR_SIZE-1 loop
-      for j in 0 to ADDR_SIZE-1 loop
-        if i_rd_mask(j) = '1' then
-          if unsigned(age_fifo(i)) = j then
-            cmp_matrix_col(i) := '1';
-            cmp_matrix(i)(j) := '1';
-          end if;
-        end if;
-      end loop;
-    end loop;
-
-    rd_ptr <= priority_encoder(cmp_matrix(to_integer(unsigned(priority_encoder(cmp_matrix_col)))));
-  end process;
-
-  rd_ptr <= priority_encoder(i_rd_mask, LSB);
-
-  ---
-  -- LOGIC
-  ---
-  with std_logic_vector'(we & re) select
-     wr_sel_d  <= wr_sel_q srl 1 when "01", -- Read
-                  wr_sel_q sll 1 when "10", -- Write
-                  wr_sel_q when others;
-
-  p_wr_sel_q:
-  process(i_clk, i_arst)
-  begin
-    if i_arst = RST_LEVEL then
-      wr_sel_q <= (others => '0');
-      wr_sel_q(0) <= '1';
-    elsif rising_edge(i_clk) then
-      if i_srst = RST_LEVEL then
-        wr_sel_q <= (others => '0');
-        wr_sel_q(0) <= '1';
-      else
-        wr_sel_q <= wr_sel_d;
-      end if;
-    end if;
-  end process;
-
-  rd_sel <= one_hot_encoder(rd_ptr);
-
-  shift_en(0) <= rd_sel(0);
-  g_shift_en:
-  for i in 1 to ADDR_SIZE-2 generate
-    shift_en(i) <= rd_sel(i) or shift_en(i-1);
-  end generate;
-
-  p_age_fifo:
-  process(i_clk)
-  begin
-    if rising_edge(i_clk) then
-      case std_logic_vector'(we & re) is
-
-        -- Read only
-        when "01" =>
-          for i in 0 to ADDR_SIZE-2 loop
-            if shift_en(i) = '1' then
-              age_fifo(i) <= age_fifo(i+1);
-            end if;
-          end loop;
-
-        -- Write only
-        when "10" =>
-          for i in 0 to 2**ADDR_LEN-1 loop
-            if wr_sel_q(i) = '1' then
-              age_fifo(i) <= i_wr_addr;
-            end if;
-          end loop;
-
-        -- Read and Write
-        when "11" =>
-          for i in 0 to 2**ADDR_LEN-2 loop
-            if shift_en(i) = '1' then
-              if wr_sel_q(i+1) = '1' then
-                age_fifo(i) <= i_wr_addr;
-              else
-                age_fifo(i) <= age_fifo(i+1);
-              end if;
-            end if;
-          end loop;
-
-        when others =>
-          -- Keep value
-
-      end case;
-    end if;
-  end process;
-
-  empty <= wr_sel_q(0);
-  full <= wr_sel_q(ADDR_SIZE);
-
-  ---
-  -- OUTPUT
-  ---
-  o_empty <= empty;
-  o_full <= full;
-
-  o_rd_addr <= age_fifo(to_integer(unsigned(rd_ptr)));
-
-end architecture;
-
 
 architecture age_matrix of dispatcher is
 
@@ -345,3 +204,144 @@ begin
 
 end architecture;
 
+
+-- TODO: do a age_fifo_rtl and compare results in vivado synthesis
+--architecture age_fifo of dispatcher is
+--
+--  constant ADDR_SIZE : natural := 2**ADDR_LEN;
+--
+--  signal age_fifo : std_logic_matrix(0 to ADDR_SIZE-1)(ADDR_LEN-1 downto 0);
+--
+--  signal wr_sel_d : std_logic_vector(ADDR_SIZE downto 0);
+--  signal wr_sel_q : std_logic_vector(ADDR_SIZE downto 0);
+--  signal rd_sel : std_logic_vector(ADDR_SIZE-1 downto 0);
+--  signal shift_en : std_logic_vector(ADDR_SIZE-2 downto 0);
+--
+--  signal rd_ptr  : std_logic_vector(ADDR_LEN-1 downto 0);
+--
+--  signal empty : std_logic;
+--  signal full : std_logic;
+--
+--  signal we : std_logic;
+--  signal re : std_logic;
+--
+--begin
+--
+--  ---
+--  -- INPUT
+--  ---
+--  we <= i_we and not full;
+--  re <= i_re and not empty;
+--
+--  --FIXME: The issue with the age_fifo is that the data must be compared, which
+--  -- Resolve at building a matrix of "equal" to match the correct index to the correct data
+--  -- In a sense, it's better to just go with a matrix before as it will reduce the datapath
+--  -- Compared here to adding multiple logic levels
+--  --
+--  -- Note: fix the downto/to and priority enc LSB/MSB, it should in theory work but not tested
+--  p_rd_ptr:
+--  process(i_rd_mask, age_fifo)
+--    variable cmp_matrix : std_logic_matrix(ADDR_SIZE-1 downto 0)(ADDR_SIZE-1 downto 0);
+--    variable cmp_matrix_col : std_logic_vector(ADDR_SIZE-1 downto 0);
+--  begin
+--    for i in 0 to ADDR_SIZE-1 loop
+--      for j in 0 to ADDR_SIZE-1 loop
+--        if i_rd_mask(j) = '1' then
+--          if unsigned(age_fifo(i)) = j then
+--            cmp_matrix_col(i) := '1';
+--            cmp_matrix(i)(j) := '1';
+--          end if;
+--        end if;
+--      end loop;
+--    end loop;
+--
+--    rd_ptr <= priority_encoder(cmp_matrix(to_integer(unsigned(priority_encoder(cmp_matrix_col)))));
+--  end process;
+--
+--  rd_ptr <= priority_encoder(i_rd_mask, LSB);
+--
+--  ---
+--  -- LOGIC
+--  ---
+--  with std_logic_vector'(we & re) select
+--     wr_sel_d  <= wr_sel_q srl 1 when "01", -- Read
+--                  wr_sel_q sll 1 when "10", -- Write
+--                  wr_sel_q when others;
+--
+--  p_wr_sel_q:
+--  process(i_clk, i_arst)
+--  begin
+--    if i_arst = RST_LEVEL then
+--      wr_sel_q <= (others => '0');
+--      wr_sel_q(0) <= '1';
+--    elsif rising_edge(i_clk) then
+--      if i_srst = RST_LEVEL then
+--        wr_sel_q <= (others => '0');
+--        wr_sel_q(0) <= '1';
+--      else
+--        wr_sel_q <= wr_sel_d;
+--      end if;
+--    end if;
+--  end process;
+--
+--  rd_sel <= one_hot_encoder(rd_ptr);
+--
+--  shift_en(0) <= rd_sel(0);
+--  g_shift_en:
+--  for i in 1 to ADDR_SIZE-2 generate
+--    shift_en(i) <= rd_sel(i) or shift_en(i-1);
+--  end generate;
+--
+--  p_age_fifo:
+--  process(i_clk)
+--  begin
+--    if rising_edge(i_clk) then
+--      case std_logic_vector'(we & re) is
+--
+--        -- Read only
+--        when "01" =>
+--          for i in 0 to ADDR_SIZE-2 loop
+--            if shift_en(i) = '1' then
+--              age_fifo(i) <= age_fifo(i+1);
+--            end if;
+--          end loop;
+--
+--        -- Write only
+--        when "10" =>
+--          for i in 0 to 2**ADDR_LEN-1 loop
+--            if wr_sel_q(i) = '1' then
+--              age_fifo(i) <= i_wr_addr;
+--            end if;
+--          end loop;
+--
+--        -- Read and Write
+--        when "11" =>
+--          for i in 0 to 2**ADDR_LEN-2 loop
+--            if shift_en(i) = '1' then
+--              if wr_sel_q(i+1) = '1' then
+--                age_fifo(i) <= i_wr_addr;
+--              else
+--                age_fifo(i) <= age_fifo(i+1);
+--              end if;
+--            end if;
+--          end loop;
+--
+--        when others =>
+--          -- Keep value
+--
+--      end case;
+--    end if;
+--  end process;
+--
+--  empty <= wr_sel_q(0);
+--  full <= wr_sel_q(ADDR_SIZE);
+--
+--  ---
+--  -- OUTPUT
+--  ---
+--  o_empty <= empty;
+--  o_full <= full;
+--
+--  o_rd_addr <= age_fifo(to_integer(unsigned(rd_ptr)));
+--
+--end architecture;

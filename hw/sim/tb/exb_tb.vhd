@@ -203,8 +203,8 @@ begin
         i_disp_vj <= (others => 'X');
 
         i_disp_rk <= '1';
-        i_disp_tq <= (others => 'X');
-        i_disp_vj <= x"00000004";
+        i_disp_tk <= (others => 'X');
+        i_disp_vk <= x"00000004";
 
         i_disp_tq <= x"1";
 
@@ -226,7 +226,7 @@ begin
 
         i_disp_rk <= '0';
         i_disp_tk <= x"1";
-        i_disp_vj <= (others => 'X');
+        i_disp_vk <= (others => 'X');
 
         i_disp_tq <= x"2";
 
@@ -243,13 +243,9 @@ begin
 
         i_disp_rk <= '0';
         i_disp_tk <= x"1";
-        i_disp_vj <= (others => 'X');
+        i_disp_vk <= (others => 'X');
 
         i_disp_tq <= x"3";
-
-        i_cdbr_rq <= '0';
-        i_cdbr_tq <= (others => 'X');
-        i_cdbr_vq <= (others => 'X');
 
         -- AABBCCDD + BBCCDDEE
         i_cdbr_rq <= '1';

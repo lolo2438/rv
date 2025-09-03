@@ -149,7 +149,6 @@ begin
   exb_entry.tq   <= i_disp_tq;
   exb_entry.busy <= '1';
 
-
   ---
   -- LOGIC
   ---
@@ -225,7 +224,7 @@ begin
 
   empty <= nor busy;
 
-  u_otm : entity hw.dispatcher(age_fifo)
+  u_otm : entity hw.dispatcher(age_matrix)
   generic map(
     RST_LEVEL => RST_LEVEL,
     ADDR_LEN => EXB_LEN

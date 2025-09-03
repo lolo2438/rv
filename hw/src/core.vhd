@@ -244,7 +244,7 @@ begin
   disp_valid <= not disp_illegal;
 
   sys_full <= ldu_full or stu_full or grp_full or exu_full or rob_full;
-  sys_empty <= ldu_empty or stu_empty or exu_empty or rob_empty;
+  sys_empty <= ldu_empty and stu_empty and exu_empty and rob_empty;
 
   u_sys:
   entity hw.sys

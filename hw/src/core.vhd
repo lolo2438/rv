@@ -132,14 +132,13 @@ architecture rtl of core is
   signal lsu_vd               : std_logic_vector(XLEN-1 downto 0);
   signal lsu_td               : std_logic_vector(TAG_LEN-1 downto 0);
   signal lsu_rd               : std_logic;
+  signal lsu_tq               : std_logic_vector(TAG_LEN-1 downto 0);
 
-  signal ldu_qr               : std_logic_vector(LDU_LEN-1 downto 0);
   signal ldu_empty            : std_logic;
   signal ldu_full             : std_logic;
 
   signal stu_empty            : std_logic;
   signal stu_full             : std_logic;
-  signal stu_qr               : std_logic_vector(STU_LEN-1 downto 0);
 
   signal grp_full             : std_logic;
 
@@ -331,11 +330,9 @@ begin
   --       This should be in a core_config_pkg.vhd file
   with disp_op select
     exu_tq <= rgu_tq when OP_OP | OP_IMM | OP_AUIPC | OP_LUI | OP_JAL | OP_JALR,
-              --lsu_tq when OP_LOAD | OP_STORE,
+              lsu_tq when OP_LOAD | OP_STORE,
               --bru_tq when OP_BRANCH,
               --sys_tq when OP_SYSTEM,
-              --format_tag(UNIT_LDU, ldu_qr) when
-              --format_tag(UNIT_STU, stu_qr)
               (others => 'X') when others;
 
   exu_vj_src <= '1' when disp_op = OP_AUIPC else '0';
@@ -427,6 +424,7 @@ begin
     i_disp_vd       => lsu_vd,
     i_disp_td       => lsu_td,
     i_disp_rd       => lsu_rd,
+    o_disp_tq       => lsu_tq,
     o_cdbw_vq       => cdbw_lsu.vq,
     o_cdbw_tq       => cdbw_lsu.tq,
     o_cdbw_req      => cdbw_lsu.req,

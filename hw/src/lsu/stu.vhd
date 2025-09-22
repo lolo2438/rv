@@ -2,9 +2,6 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library common;
-use common.fnct.bit_reverse;
-
 entity stu is
   generic (
     RST_LEVEL : std_logic := '0';
@@ -32,6 +29,8 @@ entity stu is
     i_disp_vd       : in  std_logic_vector(XLEN-1 downto 0);        --! Data field value for Store
     i_disp_td       : in  std_logic_vector(TAG_LEN-1 downto 0);     --! Data tag to look for if it's not ready
     i_disp_rd       : in  std_logic;                                --! Data ready flag
+
+    o_disp_qr       : out std_logic_vector(STU_LEN-1 downto 0);     --! STU address to write back to
 
     -- GRP I/F
     i_wr_grp        : in  std_logic_vector(GRP_LEN-1 downto 0);     --! Group to set for the store operation
@@ -89,8 +88,8 @@ architecture rtl of stu is
   signal empty    : std_logic;
   signal commit   : std_logic;
 
-  signal busy_flags : std_logic_vector(0 to STU_SIZE-1);
-  signal stu_deps   : std_logic_vector(0 to STU_SIZE-1);
+  signal busy_flags : std_logic_vector(STU_SIZE-1 downto 0);
+  signal stu_deps   : std_logic_vector(STU_SIZE-1 downto 0);
   signal store_rdy  : std_logic;
 
   signal stu_entry : stu_buf_field_t;
@@ -195,8 +194,10 @@ begin
   o_empty         <= empty;
   o_full          <= full;
   o_rd_grp_match  <= grp_match;
-  --o_stu_dep       <= stu_deps;
-  o_stu_dep       <= bit_reverse(stu_deps);
+  o_disp_qr      <= std_logic_vector(wr_ptr);
+
+  o_stu_dep       <= stu_deps;
+
   o_stu_addr      <= std_logic_vector(rd_ptr);
 
   o_issue_valid <= store_rdy;

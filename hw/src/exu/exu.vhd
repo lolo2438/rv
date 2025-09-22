@@ -76,7 +76,7 @@ begin
   -- INPUT
   ---
   -- FIXME: because exec_rdy = '0', exec_done can't be pipelined since issue_valid = 0
-  exec_rdy <= not (cdbw_req and i_cdbw_ack and exec_done);
+  exec_rdy <= not (cdbw_req and (not i_cdbw_ack) and exec_done);
 
   --rad|e
   --000|1
@@ -137,7 +137,7 @@ begin
   )
   port map(
     i_clk   => i_clk,
-    i_valid => issue_valid,
+    i_valid => issue_valid and exec_rdy,
     i_tq    => issue_tq,
     i_a     => issue_vj,
     i_b     => issue_vk,

@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 use ieee.math_real.all;
 
 library hw;
+use hw.tag_pkg.all;
 
 library riscv;
 use riscv.RV32I.all;
@@ -41,6 +42,7 @@ entity lsu is
     i_disp_vd       : in  std_logic_vector(XLEN-1 downto 0);      --! Data field value for Store
     i_disp_td       : in  std_logic_vector(TAG_LEN-1 downto 0);   --! Data tag to look for if it's not ready
     i_disp_rd       : in  std_logic;                              --! Data ready flag
+    o_disp_tq       : out std_logic_vector(TAG_LEN-1 downto 0);   --! Tag to write back to
 
     -- CDB WR I/F
     o_cdbw_vq       : out std_logic_vector(XLEN-1 downto 0);      --! Data to write on the bus
@@ -74,6 +76,16 @@ end entity;
 
 architecture rtl of lsu is
 
+  -- TODO: unalign check + error repport in case
+  --       Though for words:
+  --       Unalign checks should be done when instruction is being issued
+  --       because the address + F3 is needed.
+  --
+  --       Upon issuing the address, the following actions should be taken
+  --       Two transactions must be issued to ADDR and ADDR+/-1
+  --       The byten mask must be adapted
+  signal unaligned_op : std_logic;
+
   constant GRP_LEN  : natural := 4;
 
   ---
@@ -89,27 +101,31 @@ architecture rtl of lsu is
   signal stu_disp_store   : std_logic;
   signal stu_rd_grp_match : std_logic;
   signal stu_deps         : std_logic_vector(2**STU_LEN-1 downto 0);
-  signal stu_raddr        : std_logic_vector(STU_LEN-1 downto 0);
   signal stu_issue_rdy    : std_logic;
   signal stu_issue_valid  : std_logic;
   signal stu_issue_f3     : std_logic_vector(2 downto 0);
+  signal stu_issue_buf    : std_logic_vector(STU_LEN-1 downto 0);
   signal stu_issue_addr   : std_logic_vector(XLEN-1 downto 0);
   signal stu_issue_data   : std_logic_vector(XLEN-1 downto 0);
   signal stu_issue        : std_logic;
 
+  signal stu_qr           : std_logic_vector(STU_LEN-1 downto 0);
 
   ---
   -- LDU
   ---
-  signal ldu_disp_load    : std_logic;
-  signal ldu_mem_wr_rdy   : std_logic;
-  signal ldu_mem_wr_valid : std_logic;
-  signal ldu_mem_wr_addr  : std_logic_vector(XLEN-1 downto 0);
-  signal ldu_mem_wr_qr    : std_logic_vector(LDU_LEN-1 downto 0);
-  signal ldu_mem_rd_valid : std_logic;
-  signal ldu_mem_rd_qr    : std_logic_vector(LDU_LEN-1 downto 0);
-  signal ldu_mem_rd_data  : std_logic_vector(XLEN-1 downto 0);
-  signal ldu_rd_grp_match : std_logic;
+  signal ldu_disp_load        : std_logic;
+  signal ldu_mem_req_rdy      : std_logic;
+  signal ldu_mem_req_valid    : std_logic;
+  signal ldu_mem_req_addr     : std_logic_vector(XLEN-1 downto 0);
+  signal ldu_mem_req_qr       : std_logic_vector(LDU_LEN-1 downto 0);
+  signal ldu_mem_resp_valid   : std_logic;
+  signal ldu_mem_resp_qr      : std_logic_vector(LDU_LEN-1 downto 0);
+  signal ldu_mem_resp_data    : std_logic_vector(XLEN-1 downto 0);
+  signal ldu_rd_grp_match     : std_logic;
+
+  --FIXME IS this neccessary ?
+  signal ldu_qr           : std_logic_vector(LDU_LEN-1 downto 0);
 
   ---
   -- MEM
@@ -121,10 +137,12 @@ begin
   ---
   -- INPUT
   ---
-  ldu_mem_wr_rdy    <= i_mem_rd_rdy;
-  ldu_mem_rd_data   <= i_mem_rd_data;
-  ldu_mem_rd_valid  <= i_mem_rd_valid;
-  ldu_mem_rd_qr     <= i_mem_rd_ptr;
+  stu_issue_rdy     <= i_mem_wr_rdy;
+
+  ldu_mem_req_rdy    <= i_mem_rd_rdy;
+  ldu_mem_resp_data  <= i_mem_rd_data;
+  ldu_mem_resp_valid <= i_mem_rd_valid;
+  ldu_mem_resp_qr    <= i_mem_rd_ptr;
 
   grp_disp_fence  <= i_disp_valid when i_disp_op = OP_MISC_MEM and i_disp_f3 = FUNCT3_FENCE else '0';
   ldu_disp_load   <= i_disp_valid when i_disp_op = OP_LOAD else '0';
@@ -176,6 +194,7 @@ begin
     i_disp_vd       => i_disp_vd,
     i_disp_td       => i_disp_td,
     i_disp_rd       => i_disp_rd,
+    o_disp_qr       => stu_qr,
     i_wr_grp        => wr_grp,
     i_rd_grp        => rd_grp,
     o_rd_grp_match  => stu_rd_grp_match,
@@ -183,7 +202,7 @@ begin
     i_cdbr_tq       => i_cdbr_tq,
     i_cdbr_rq       => i_cdbr_rq,
     o_stu_dep       => stu_deps,
-    o_stu_addr      => stu_raddr,
+    o_stu_addr      => stu_issue_buf,
     i_issue_rdy     => stu_issue_rdy,
     o_issue_valid   => stu_issue_valid,
     o_issue_f3      => stu_issue_f3,
@@ -204,61 +223,87 @@ begin
     XLEN      => XLEN
   )
   port map(
-    i_clk           => i_clk,
-    i_arst          => i_arst,
-    i_srst          => i_srst,
-    o_empty         => o_ldu_empty,
-    o_full          => o_ldu_full,
-    i_disp_load     => ldu_disp_load,
-    i_disp_f3       => i_disp_f3,
-    i_disp_tq       => i_disp_tq,
-    i_disp_va       => i_disp_va,
-    i_disp_ta       => i_disp_ta,
-    i_disp_ra       => i_disp_ra,
-    i_cdbr_vq       => i_cdbr_vq,
-    i_cdbr_tq       => i_cdbr_tq,
-    i_cdbr_rq       => i_cdbr_rq,
-    i_wr_grp        => wr_grp,
-    i_rd_grp        => rd_grp,
-    o_rd_grp_match  => ldu_rd_grp_match,
-    i_stu_issue     => stu_issue,
-    i_stu_addr      => stu_raddr,
-    i_stu_data      => stu_issue_data,
-    i_stu_dep       => stu_deps,
-    i_mem_wr_rdy    => ldu_mem_wr_rdy,
-    o_mem_wr_valid  => ldu_mem_wr_valid,
-    o_mem_wr_addr   => ldu_mem_wr_addr,
-    o_mem_wr_qr     => ldu_mem_wr_qr,
-    i_mem_rd_valid  => ldu_mem_rd_valid,
-    i_mem_rd_qr     => ldu_mem_rd_qr,
-    i_mem_rd_data   => ldu_mem_rd_data,
-    o_cdbw_vq       => o_cdbw_vq,
-    o_cdbw_tq       => o_cdbw_tq,
-    o_cdbw_req      => o_cdbw_req,
-    o_cdbw_lh       => o_cdbw_lh,
-    i_cdbw_ack      => i_cdbw_ack
+    i_clk             => i_clk,
+    i_arst            => i_arst,
+    i_srst            => i_srst,
+    o_empty           => o_ldu_empty,
+    o_full            => o_ldu_full,
+    i_disp_load       => ldu_disp_load,
+    i_disp_f3         => i_disp_f3,
+    i_disp_tq         => i_disp_tq,
+    i_disp_va         => i_disp_va,
+    i_disp_ta         => i_disp_ta,
+    i_disp_ra         => i_disp_ra,
+    o_disp_qr         => ldu_qr,
+    i_cdbr_vq         => i_cdbr_vq,
+    i_cdbr_tq         => i_cdbr_tq,
+    i_cdbr_rq         => i_cdbr_rq,
+    i_wr_grp          => wr_grp,
+    i_rd_grp          => rd_grp,
+    o_rd_grp_match    => ldu_rd_grp_match,
+    i_stu_issue       => stu_issue,
+    i_stu_issue_buf   => stu_issue_buf,
+    i_stu_issue_addr  => stu_issue_addr,
+    i_stu_issue_data  => stu_issue_data,
+    i_stu_dep         => stu_deps,
+    i_mem_req_rdy     => ldu_mem_req_rdy,
+    o_mem_req_valid   => ldu_mem_req_valid,
+    o_mem_req_addr    => ldu_mem_req_addr,
+    o_mem_req_qr      => ldu_mem_req_qr,
+    i_mem_resp_valid  => ldu_mem_resp_valid,
+    i_mem_resp_qr     => ldu_mem_resp_qr,
+    i_mem_resp_data   => ldu_mem_resp_data,
+    o_cdbw_vq         => o_cdbw_vq,
+    o_cdbw_tq         => o_cdbw_tq,
+    o_cdbw_req        => o_cdbw_req,
+    o_cdbw_lh         => o_cdbw_lh,
+    i_cdbw_ack        => i_cdbw_ack
   );
 
   ---
   -- Memory
   ---
 
-  -- TODO
-  --F3 value:
-  --store_byten <=
+  -- Todo: verify unalignment
+  -- For byte
+  -- select bit using address
+  -- No support for unaligned addresses
+  p_store_byten:
+  process(all)
+    variable addr_index : natural;
+  begin
+    addr_index := to_integer(unsigned(stu_issue_addr(1 downto 0)));
 
+    store_byten <= (others => '0');
+    case stu_issue_f3 is
+      when FUNCT3_SW =>
+        store_byten <= (others => '1');
+      when FUNCT3_SH =>
+        -- FIXME: issue if addr_index = 11, 100 is out of range
+        --        To patch this, only bit (1) should be used
+        store_byten(addr_index+1 downto addr_index) <= "11";
+      when FUNCT3_SB =>
+        store_byten(addr_index) <= '1';
+      when others => -- Illegal state
+    end case;
+  end process;
+
+  -- TODO: NEED TO SHIFT AND MASK DATA OUTPUT ACCORDING TO BYTEN
+
+  o_disp_tq <= tag_format(UNIT_LSU_LDU, ldu_qr) when i_disp_op = OP_LOAD else
+               tag_format(UNIT_LSU_STU, stu_qr) when i_disp_op = OP_STORE else
+               (others => 'X');
 
   -- OUTPUT
   ---
   o_mem_wr_valid <= stu_issue_valid;
-  stu_issue_rdy  <= i_mem_wr_rdy;
   o_mem_wr_addr  <= stu_issue_addr;
   o_mem_wr_data  <= stu_issue_data;
-  o_mem_wr_we    <= store_byten;
+  o_mem_wr_we    <= store_byten when stu_issue_valid = '1' and stu_issue_rdy = '1' else (others => '0');
 
-  o_mem_rd_re    <= ldu_mem_wr_valid;
-  o_mem_rd_addr  <= ldu_mem_wr_addr;
-  o_mem_rd_ptr   <= ldu_mem_wr_qr;
+  o_mem_rd_re    <= ldu_mem_req_valid;
+  o_mem_rd_addr  <= ldu_mem_req_addr;
+  o_mem_rd_ptr   <= ldu_mem_req_qr;
 
 
 end architecture;

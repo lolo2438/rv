@@ -13,14 +13,14 @@ entity stack is
     STACK_SIZE : natural
   );
   port(
-    clk_i   : in  std_logic;
-    rst_i   : in  std_logic;
-    data_i  : in  std_logic_vector(DATA_WIDTH-1 downto 0);
-    push_i  : in  std_logic;
-    pop_i   : in  std_logic;
-    full_o  : out std_logic;
-    empty_o : out std_logic;
-    data_o  : out std_logic_vector(DATA_WIDTH-1 downto 0)
+    i_clk   : in  std_logic;
+    i_srst  : in  std_logic;
+    i_data  : in  std_logic_vector(DATA_WIDTH-1 downto 0);
+    i_push  : in  std_logic;
+    i_pop   : in  std_logic;
+    o_full  : out std_logic;
+    o_empty : out std_logic;
+    o_data  : out std_logic_vector(DATA_WIDTH-1 downto 0)
   );
 end entity;
 
@@ -37,17 +37,17 @@ architecture rtl of stack is
 
 begin
 
-  valid_push <= '1' when full = '0' and push_i = '1' and pop_i = '0' else '0';
-  valid_pop <= '1' when empty = '0' and push_i = '0' and pop_i = '1' else '0';
+  valid_push <= '1' when full = '0' and i_push = '1' and i_pop = '0' else '0';
+  valid_pop <= '1' when empty = '0' and i_push = '0' and i_pop = '1' else '0';
 
   full <= '1' when stack_addr = STACK_SIZE-1 else '0';
-  --empty <= '1' when stack_addr = 0 else '0';
+  empty <= '1' when stack_addr = 0 else '0';
 
   p_empty:
-  process(clk_i)
+  process(i_clk)
   begin
-    if rising_edge(clk_i) then
-      if rst_i = '1' then
+    if rising_edge(i_clk) then
+      if i_srst = '1' then
         empty <= '1';
       else
         if stack_addr = 0 then
@@ -63,11 +63,11 @@ begin
 
 
   p_stack:
-  process(clk_i)
+  process(i_clk)
     variable next_stack_addr : unsigned(stack_addr'range);
   begin
-    if rising_edge(clk_i) then
-      if rst_i = '1' then
+    if rising_edge(i_clk) then
+      if i_srst = '1' then
         stack_addr <= (others => '0');
         next_stack_addr := (others => '0');
       else
@@ -78,15 +78,15 @@ begin
             next_stack_addr := stack_addr + 1;
           end if;
 
-          stack_mem(to_integer(next_stack_addr)) <= data_i;
+          stack_mem(to_integer(next_stack_addr)) <= i_data;
 
         elsif valid_pop = '1' then
           if stack_addr /= 0 then
             next_stack_addr := stack_addr - 1;
           end if;
 
-        elsif push_i = '1' and pop_i = '1' then
-          stack_mem(to_integer(next_stack_addr)) <= data_i;
+        elsif i_push = '1' and i_pop = '1' then
+          stack_mem(to_integer(next_stack_addr)) <= i_data;
         end if;
 
       end if;
@@ -95,9 +95,10 @@ begin
     end if;
   end process;
 
-  data_o <= stack_mem(to_integer(stack_addr));
+  o_data <= stack_mem(to_integer(stack_addr));
 
-  full_o <= full;
-  empty_o <= empty;
+  o_full <= full;
+  o_empty <= empty;
 
 end architecture;
+

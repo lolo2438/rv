@@ -50,7 +50,7 @@ begin
   ---
   -- INPUT
   ---
-  halt <= i_empty and not i_en;
+  halt <= not i_en or i_empty;
 
   ebreak <= '1' when i_disp_valid = '1' and i_disp_op = OP_SYSTEM and i_disp_f12 = FUNCT12_EBREAK else '0';
 
@@ -98,7 +98,7 @@ begin
     if i_arst = RST_LEVEL then
       service <= '0';
     elsif rising_edge(i_clk) then
-      if i_srst = '1' then
+      if i_srst = RST_LEVEL then
         service <= '0';
       elsif ecall = '1' then
         service <= '1';

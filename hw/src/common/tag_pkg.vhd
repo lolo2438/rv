@@ -3,16 +3,16 @@ use ieee.std_logic_1164.all;
 
 package tag_pkg is
 
-  constant TAG_BITS     : natural := 3;
+  constant TAG_UNIT_LEN : natural := 3;
 
-  constant UNIT_RGU_ROB : std_logic_vector(TAG_BITS-1 downto 0) := "000";
-  --constant UNIT_RGU_REG : std_logic_vector(TAG_BITS-1 downto 0) := "001";
-  constant UNIT_LSU_LDU : std_logic_vector(TAG_BITS-1 downto 0) := "010";
-  constant UNIT_LSU_STU : std_logic_vector(TAG_BITS-1 downto 0) := "011";
-  --constant UNIT_BRU_BRP : std_logic_vector(TAG_BITS-1 downto 0) := "100";
-  --constant UNIT_BRU_RAS : std_logic_vector(TAG_BITS-1 downto 0) := "101";
-  --constant UNIT_SYS     : std_logic_vector(TAG_BITS-1 downto 0) := "110";
-  --constant UNIT_SYS_CSR : std_logic_vector(TAG_BITS-1 downto 0) := "111";
+  constant UNIT_RGU_ROB : std_logic_vector(TAG_UNIT_LEN-1 downto 0) := "000";
+  constant UNIT_RGU_REG : std_logic_vector(TAG_UNIT_LEN-1 downto 0) := "001";
+  constant UNIT_LSU_LDU : std_logic_vector(TAG_UNIT_LEN-1 downto 0) := "010";
+  constant UNIT_LSU_STU : std_logic_vector(TAG_UNIT_LEN-1 downto 0) := "011";
+  constant UNIT_BRU_BRP : std_logic_vector(TAG_UNIT_LEN-1 downto 0) := "100";
+  constant UNIT_BRU_RAS : std_logic_vector(TAG_UNIT_LEN-1 downto 0) := "101";
+  constant UNIT_SYS     : std_logic_vector(TAG_UNIT_LEN-1 downto 0) := "110";
+  constant UNIT_SYS_CSR : std_logic_vector(TAG_UNIT_LEN-1 downto 0) := "111";
 
   constant STU_LEN : natural := 5;
   constant LDU_LEN : natural := 5;
@@ -21,16 +21,16 @@ package tag_pkg is
   constant EXB_LEN : natural := 5;
   constant BRU_LEN : natural := 3;
 
-  constant MAX_UNIT_LEN : natural := MAXIMUM((ROB_LEN, EXB_LEN, REG_LEN, LDU_LEN, STU_LEN));
+  constant TAG_ADDR_LEN : natural := MAXIMUM((ROB_LEN, EXB_LEN, REG_LEN, LDU_LEN, STU_LEN));
 
-  constant TAG_LEN : natural := TAG_BITS + MAX_UNIT_LEN;
+  constant TAG_LEN : natural := TAG_UNIT_LEN + TAG_ADDR_LEN;
 
   -- Derived constants for decoding
-  constant TAG_UNIT_HIGH : natural := TAG_LEN - 1;
-  constant TAG_UNIT_LOW  : natural := TAG_UNIT_HIGH - TAG_BITS;
+  constant TAG_UNIT_HIGH  : natural := TAG_LEN - 1;
+  constant TAG_UNIT_LOW   : natural := TAG_UNIT_HIGH - TAG_UNIT_LEN;
 
-  constant TAG_ADDR_HIGH : natural := TAG_UNIT_LOW - 1;
-  constant TAG_ADDR_LOW  : natural := 0;
+  constant TAG_ADDR_HIGH  : natural := TAG_UNIT_LOW - 1;
+  constant TAG_ADDR_LOW   : natural := 0;
 
 
   --! \arg unit the unit to encode in the tag
@@ -53,15 +53,18 @@ end package;
 package body tag_pkg is
 
   pure function tag_format(unit : std_logic_vector; addr : std_logic_vector) return std_logic_vector is
+    variable tag_addr : std_logic_vector(TAG_ADDR_LEN-1 downto 0);
+    variable tag_unit : std_logic_vector(TAG_UNIT_LEN-1 downto 0);
   begin
-    return unit & addr;
+    tag_addr(addr'range) := addr;
+    tag_unit(unit'range) := unit;
+    return tag_unit & tag_addr;
   end function;
 
   impure function tag_read_unit(tag : std_logic_vector) return std_logic_vector is
   begin
     return tag(TAG_UNIT_HIGH downto TAG_UNIT_LOW);
   end function;
-
 
   impure function tag_read_addr(tag : std_logic_vector) return std_logic_vector is
   begin

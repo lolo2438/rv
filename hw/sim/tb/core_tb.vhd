@@ -217,13 +217,24 @@ begin
     end procedure;
 
     procedure run_program is
+      variable program_done : boolean := false;
     begin
+      tb_imem_sel <= '0';
+      tb_dmem_sel <= '0';
+
       core_srst <= RST_LEVEL;
       wait until rising_edge(core_clk);
       core_srst <= not RST_LEVEL;
 
       core_en <= '1';
-      wait until (core_halted = '1');
+      while not program_done loop
+        if core_halted = '1' and core_debug = '1' then
+          program_done := true;
+        end if;
+
+        wait until rising_edge(core_clk);
+      end loop;
+
       core_en <= '0';
     end procedure;
 
@@ -268,7 +279,7 @@ begin
   core_imem_rdy    <= not tb_imem_sel;
   core_imem_dvalid <= imem_en;
 
-  dmem_en    <= (not core_stalled and core_en and (core_dmem_wvalid or core_dmem_ravalid)) or tb_dmem_sel;
+  dmem_en    <= (not core_halted and core_en and (core_dmem_wvalid or core_dmem_ravalid)) or tb_dmem_sel;
   dmem_we    <= tb_dmem_we    when tb_dmem_sel = '1' else core_dmem_we;
   dmem_waddr <= tb_dmem_waddr when tb_dmem_sel = '1' else core_dmem_waddr(DMEM_ADDR_WIDTH-1+2 downto 2);
   dmem_wdata <= tb_dmem_wdata when tb_dmem_sel = '1' else core_dmem_wdata;
@@ -333,3 +344,4 @@ begin
   );
 
 end architecture;
+

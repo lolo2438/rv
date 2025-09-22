@@ -53,16 +53,17 @@ architecture tb of ldu_tb is
   signal i_rd_grp         : std_logic_vector(GRP_LEN-1 downto 0) := (others => '0');
   signal o_rd_grp_match   : std_logic;
   signal i_stu_issue      : std_logic := '0';
-  signal i_stu_addr       : std_logic_vector(STU_LEN-1 downto 0) := (others => '0');
-  signal i_stu_data       : std_logic_vector(XLEN-1 downto 0) := (others => '0');
+  signal i_stu_issue_addr       : std_logic_vector(XLEN-1 downto 0) := (others => '0');
+  signal i_stu_issue_data       : std_logic_vector(XLEN-1 downto 0) := (others => '0');
+  signal i_stu_issue_buf       : std_logic_vector(STU_LEN-1 downto 0) := (others => '0');
   signal i_stu_dep        : std_logic_vector(2**STU_LEN-1 downto 0) := (others => '0');
-  signal i_mem_wr_rdy     : std_logic := '0';
-  signal o_mem_wr_valid   : std_logic;
-  signal o_mem_wr_addr    : std_logic_vector(XLEN-1 downto 0);
-  signal o_mem_wr_qr      : std_logic_vector(LDU_LEN-1 downto 0);
-  signal i_mem_rd_valid   : std_logic := '0';
-  signal i_mem_rd_qr      : std_logic_vector(LDU_LEN-1 downto 0) := (others => '0');
-  signal i_mem_rd_data    : std_logic_vector(XLEN-1 downto 0) := (others => '0');
+  signal i_mem_req_rdy     : std_logic := '0';
+  signal o_mem_req_valid   : std_logic;
+  signal o_mem_req_addr    : std_logic_vector(XLEN-1 downto 0);
+  signal o_mem_req_qr      : std_logic_vector(LDU_LEN-1 downto 0);
+  signal i_mem_resp_valid   : std_logic := '0';
+  signal i_mem_resp_qr      : std_logic_vector(LDU_LEN-1 downto 0) := (others => '0');
+  signal i_mem_resp_data    : std_logic_vector(XLEN-1 downto 0) := (others => '0');
   signal o_cdbw_vq        : std_logic_vector(XLEN-1 downto 0);
   signal o_cdbw_tq        : std_logic_vector(TAG_LEN-1 downto 0);
   signal o_cdbw_req       : std_logic;
@@ -99,24 +100,24 @@ begin
         i_disp_ta <= (others => 'X');
         i_disp_ra <= '1';
         i_disp_tq <= "01";
-        i_mem_wr_rdy <= '1';
+        i_mem_req_rdy <= '1';
 
         wait until rising_edge(i_clk);
         i_disp_load <= '0';
         wait until rising_edge(i_clk);
-        check(o_mem_wr_valid = '1', "Should send a load request");
-        check_equal(o_mem_wr_addr, std_logic_vector'(x"AABBCCDD"));
-        qr(0) <= o_mem_wr_qr;
+        check(o_mem_req_valid = '1', "Should send a load request");
+        check_equal(o_mem_req_addr, std_logic_vector'(x"AABBCCDD"));
+        qr(0) <= o_mem_req_qr;
 
         wait until rising_edge(i_clk);
-        check(o_mem_wr_valid = '0', "Request should have been handled");
+        check(o_mem_req_valid = '0', "Request should have been handled");
 
-        i_mem_rd_valid <= '1';
-        i_mem_rd_qr <= qr(0);
-        i_mem_rd_data <= x"1A2B3C4D";
+        i_mem_resp_valid <= '1';
+        i_mem_resp_qr <= qr(0);
+        i_mem_resp_data <= x"1A2B3C4D";
         wait until rising_edge(i_clk);
 
-        i_mem_rd_valid <= '0';
+        i_mem_resp_valid <= '0';
         wait until rising_edge(i_clk);
         check(o_cdbw_req = '1', "Should send a request since we wrote data");
         check(o_cdbw_lh = '0', "Only one value is ready");
@@ -129,12 +130,87 @@ begin
         i_cdbw_ack <= '0';
         wait until rising_edge(i_clk);
         check(o_cdbw_req = '0', "Should not have any request after ack");
+      elsif run("VQ0_LB") then
+      elsif run("VQ0_LH") then
 
       elsif run("VQ0_cdb_wr_load") then
+        assert false severity failure;
       elsif run("VQ0_fence_load") then
-      elsif run("VQ1_store_dep") then
+        assert false severity failure;
+      elsif run("VQ0_store_dep") then
+        -- Verify that when doing a store the load is not executed until store is executed
+        i_disp_load <= '1';
+        i_disp_f3 <= FUNCT3_LW;
+        i_disp_va <= x"AABBCCDD";
+        i_disp_ta <= (others => 'X');
+        i_disp_ra <= '1';
+        i_disp_tq <= "01";
+        i_mem_req_rdy <= '1';
+
+        i_stu_dep <= std_logic_vector(to_unsigned(1, i_stu_dep'length));
+        i_stu_issue_addr <= (others => 'X');
+        i_stu_issue <= '0';
+        wait until rising_edge(i_clk);
+        i_disp_load <= '0';
+
+        wait until rising_edge(i_clk);
+        check(o_mem_req_valid = '1', "Memory request should be valid");
+
+        i_stu_issue_data <= (others => 'X');
+        i_stu_issue_addr <= (others => 'X');
+        i_stu_issue_buf <= std_logic_vector(to_unsigned(0, i_stu_issue_buf'length));
+        i_stu_issue <= '1';
+
+        qr(0) <= o_mem_req_qr;
+        wait until rising_edge(i_clk);
+        i_mem_resp_valid <= '1';
+        i_mem_resp_data <= x"ABCDEF01";
+        i_mem_resp_qr <= qr(0);
+
+        wait until rising_edge(i_clk);
+        wait until rising_edge(i_clk);
+        check(o_cdbw_req = '1', "Data should have been fowarded and should ready to send to CDB");
+        check_equal(o_cdbw_vq, std_logic_vector'(x"ABCDEF01"));
+
+      elsif run("VQ0_store_foward") then
+        -- Verify that when there is a store dependency and the store is fowarded it works
+        -- Verify that when doing a store the load is not executed until store is executed
+        i_disp_load <= '1';
+        i_disp_f3 <= FUNCT3_LW;
+        i_disp_va <= x"AABBCCDD";
+        i_disp_ta <= (others => 'X');
+        i_disp_ra <= '1';
+        i_disp_tq <= "01";
+        i_mem_req_rdy <= '1';
+
+        i_stu_dep <= std_logic_vector(to_unsigned(1, i_stu_dep'length));
+        i_stu_issue_addr <= (others => 'X');
+        i_stu_issue_data <= (others => 'X');
+        i_stu_issue_buf  <= (others => 'X');
+        i_stu_issue <= '0';
+        wait until rising_edge(i_clk);
+        i_disp_load <= '0';
+        wait until rising_edge(i_clk);
+
+        i_stu_issue_data <= x"DEADBEEF";
+        i_stu_issue_addr <= x"AABBCCDD";
+        i_stu_issue_buf <= std_logic_vector(to_unsigned(0, i_stu_issue_buf'length));
+        i_stu_issue <= '1';
+
+        wait until rising_edge(i_clk);
+        check(o_mem_req_valid = '0', "Memory request should not be valid");
+
+        wait until rising_edge(i_clk);
+        check(o_mem_req_valid = '0', "Memory request should not be valid");
+
+        wait until rising_edge(i_clk);
+        check(o_cdbw_req = '1', "Data should have been fowarded and should ready to send to CDB");
+        check_equal(o_cdbw_vq, std_logic_vector'(x"DEADBEEF"));
+
       elsif run("VQ1_ooo_load") then
+        assert false severity failure;
       elsif run("VQ1_empty_full") then
+        assert false severity failure;
       end if;
     end loop;
 
@@ -170,16 +246,17 @@ begin
     i_rd_grp        => i_rd_grp,
     o_rd_grp_match  => o_rd_grp_match,
     i_stu_issue     => i_stu_issue,
-    i_stu_addr      => i_stu_addr,
-    i_stu_data      => i_stu_data,
-    i_stu_dep       => i_stu_dep,
-    i_mem_wr_rdy    => i_mem_wr_rdy,
-    o_mem_wr_valid  => o_mem_wr_valid,
-    o_mem_wr_addr   => o_mem_wr_addr,
-    o_mem_wr_qr     => o_mem_wr_qr,
-    i_mem_rd_valid  => i_mem_rd_valid,
-    i_mem_rd_qr     => i_mem_rd_qr,
-    i_mem_rd_data   => i_mem_rd_data,
+    i_stu_issue_addr => i_stu_issue_addr,
+    i_stu_issue_data => i_stu_issue_data,
+    i_stu_issue_buf  => i_stu_issue_buf,
+    i_stu_dep        => i_stu_dep,
+    i_mem_req_rdy    => i_mem_req_rdy,
+    o_mem_req_valid  => o_mem_req_valid,
+    o_mem_req_addr   => o_mem_req_addr,
+    o_mem_req_qr     => o_mem_req_qr,
+    i_mem_resp_valid  => i_mem_resp_valid,
+    i_mem_resp_qr     => i_mem_resp_qr,
+    i_mem_resp_data   => i_mem_resp_data,
     o_cdbw_vq       => o_cdbw_vq,
     o_cdbw_tq       => o_cdbw_tq,
     o_cdbw_req      => o_cdbw_req,

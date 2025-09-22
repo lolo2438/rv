@@ -1,3 +1,9 @@
+--
+-- Load policy:
+-- 1. Execute the load even if store dependencies,
+-- 2. If one of those store is to the same address, store that result in
+-- 3. wait until all stores are cleared to send the result to cdb.
+-- 4. Result should be either the value got from memory (random scheduling) or the latest store value to that address (fowarding)
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -37,6 +43,7 @@ entity ldu is
     i_disp_ra         : in  std_logic;                                --! address ready flag
 
     i_disp_tq         : in  std_logic_vector(TAG_LEN-1 downto 0);     --! destination tag of the loaded data
+    o_disp_qr         : out std_logic_vector(LDU_LEN-1 downto 0);     --! LDU address to write back to
 
     -- GRP I/F
     i_wr_grp          : in  std_logic_vector(GRP_LEN-1 downto 0);     --! group to attribute to the stores
@@ -45,20 +52,23 @@ entity ldu is
 
     -- STU I/F
     i_stu_issue       : in  std_logic;                                --! '1' when store operation is issued
-    i_stu_addr        : in  std_logic_vector(STU_LEN-1 downto 0);     --! store buffer address that is issued
-    i_stu_data        : in  std_logic_vector(XLEN-1 downto 0);        --! stu data fowarding
+    i_stu_issue_addr  : in  std_logic_vector(XLEN-1 downto 0);        --! Memory address that is issued
+    i_stu_issue_data  : in  std_logic_vector(XLEN-1 downto 0);        --! stu data fowarding
+    i_stu_issue_buf   : in  std_logic_vector(STU_LEN-1 downto 0);     --! store buffer address that is issued
     i_stu_dep         : in  std_logic_vector(2**STU_LEN-1 downto 0);  --! stu current dependencies
 
     -- MEM WR I/F
-    i_mem_wr_rdy      : in  std_logic;                                --! memory unit is ready for a store
-    o_mem_wr_valid    : out std_logic;                                --! the store is valid
-    o_mem_wr_addr     : out std_logic_vector(XLEN-1 downto 0);        --! address of the store op
-    o_mem_wr_qr       : out std_logic_vector(LDU_LEN-1 downto 0);     --! Write back address of the LDU
+    --FIXME: Naming convention is confusing
+    -- Recommendation: wr -> req, rd -> resp
+    i_mem_req_rdy      : in  std_logic;                                --! memory unit is ready for a load
+    o_mem_req_valid    : out std_logic;                                --! the load is valid
+    o_mem_req_addr     : out std_logic_vector(XLEN-1 downto 0);        --! address of the load op
+    o_mem_req_qr       : out std_logic_vector(LDU_LEN-1 downto 0);     --! Write back address of the LDU
 
     -- MEM RD I/F
-    i_mem_rd_valid    : out std_logic;                                --! write back valid
-    i_mem_rd_qr       : out std_logic_vector(LDU_LEN-1 downto 0);     --! write back address
-    i_mem_rd_data     : out std_logic_vector(XLEN-1 downto 0);        --! write back data
+    i_mem_resp_valid    : out std_logic;                                --! write back valid
+    i_mem_resp_qr       : out std_logic_vector(LDU_LEN-1 downto 0);     --! write back address
+    i_mem_resp_data     : out std_logic_vector(XLEN-1 downto 0);        --! write back data
 
     -- CDB READ I/F
     i_cdbr_vq         : in  std_logic_vector(XLEN-1 downto 0);        --! data from the cdb bus
@@ -115,7 +125,6 @@ architecture rtl of ldu is
 
   signal busy_flags : std_logic_vector(0 to LDU_SIZE-1);
   signal dispatch_flags : std_logic_vector(0 to LDU_SIZE-1);
-  signal done_flags : std_logic_vector(0 to LDU_SIZE-1);
   signal retire_flags : std_logic_vector(0 to LDU_SIZE-1);
   signal commit_flags : std_logic_vector(0 to LDU_SIZE-1);
 
@@ -137,6 +146,7 @@ architecture rtl of ldu is
   signal wb_data : std_logic_vector(XLEN-1 downto 0);
 
   signal commit_rdy : std_logic;
+  signal retire_rdy : std_logic;
 
 begin
 
@@ -145,19 +155,19 @@ begin
   ---
   load <= i_disp_load;
 
-  commit <= i_mem_wr_rdy and rd_grp_match and commit_rdy;
+  commit <= i_mem_req_rdy and rd_grp_match and commit_rdy;
 
-  retire <= i_cdbw_ack and (or retire_flags);
+  retire <= i_cdbw_ack and retire_rdy;
 
-  wb_data_f3 <= ldu_buf(to_integer(unsigned(i_mem_rd_qr))).f3;
+  wb_data_f3 <= ldu_buf(to_integer(unsigned(i_mem_resp_qr))).f3;
 
   -- TODO: Rethink about memory alignments
   with wb_data_f3 select
-    wb_data <= std_logic_vector(resize(signed(i_mem_rd_data(7 downto 0)), wb_data'length))    when FUNCT3_LB,
-               std_logic_vector(resize(signed(i_mem_rd_data(15 downto 0)), wb_data'length))   when FUNCT3_LH,
-               std_logic_vector(resize(unsigned(i_mem_rd_data(7 downto 0)), wb_data'length))  when FUNCT3_LBU,
-               std_logic_vector(resize(unsigned(i_mem_rd_data(15 downto 0)), wb_data'length)) when FUNCT3_LHU,
-               i_mem_rd_data                                                                  when FUNCT3_LW,
+    wb_data <= std_logic_vector(resize(signed(i_mem_resp_data(7 downto 0)), wb_data'length))    when FUNCT3_LB,
+               std_logic_vector(resize(signed(i_mem_resp_data(15 downto 0)), wb_data'length))   when FUNCT3_LH,
+               std_logic_vector(resize(unsigned(i_mem_resp_data(7 downto 0)), wb_data'length))  when FUNCT3_LBU,
+               std_logic_vector(resize(unsigned(i_mem_resp_data(15 downto 0)), wb_data'length)) when FUNCT3_LHU,
+               i_mem_resp_data                                                                  when FUNCT3_LW,
                (others => 'X') when others;
 
   ---
@@ -182,19 +192,19 @@ begin
 
   p_ldu:
   process(i_clk, i_arst)
+    variable st_dep_single_bit : std_logic;
+
+    -- MEM RESPONSE
+    variable mem_resp_ptr : natural;
   begin
     if i_arst = RST_LEVEL then
       for i in 0 to LDU_SIZE-1 loop
         ldu_buf(i).busy     <= '0';
-        ldu_buf(i).commited <= '0';
-        ldu_buf(i).done     <= '0';
       end loop;
     elsif rising_edge(i_clk) then
       if i_srst = RST_LEVEL then
         for i in 0 to LDU_SIZE-1 loop
           ldu_buf(i).busy     <= '0';
-          ldu_buf(i).commited <= '0';
-          ldu_buf(i).done     <= '0';
         end loop;
 
       else
@@ -218,22 +228,34 @@ begin
         end if;
 
         -- DATA WRITE BACK
-        if i_mem_rd_valid = '1' then
-          ldu_buf(to_integer(unsigned(i_mem_rd_qr))).data <= wb_data;
-          ldu_buf(to_integer(unsigned(i_mem_rd_qr))).done <= '1';
+        mem_resp_ptr := to_integer(unsigned(i_mem_resp_qr));
+        if i_mem_resp_valid = '1' and
+           ldu_buf(mem_resp_ptr).busy = '1' and
+           ldu_buf(mem_resp_ptr).commited = '1' and
+           ldu_buf(mem_resp_ptr).done = '0' then
+
+          ldu_buf(mem_resp_ptr).data <= wb_data;
+          ldu_buf(mem_resp_ptr).done <= '1';
         end if;
 
         -- ST DEPENDENCIES
         if i_stu_issue = '1' then
           for i in 0 to LDU_SIZE-1 loop
-            if ldu_buf(i).st_dep(to_integer(unsigned(i_stu_addr))) = '1' and ldu_buf(i).busy = '1' then
+            if ldu_buf(i).st_dep(to_integer(unsigned(i_stu_issue_buf))) = '1' and ldu_buf(i).busy = '1' then
               -- check address
-              if ldu_buf(i).addr_rdy = '1' and ldu_buf(i).addr = i_stu_addr then
-                ldu_buf(i).data <= i_stu_data;
+              if ldu_buf(i).addr_rdy = '1' and ldu_buf(i).addr = i_stu_issue_addr then
+                ldu_buf(i).data <= i_stu_issue_data;
                 ldu_buf(i).done <= '1';
               end if;
 
-              ldu_buf(i).st_dep(to_integer(unsigned(i_stu_addr))) <= '0';
+              -- IF there is a single dependency left, it will be cleared. This makes it that we can clear the st_spec flag
+              -- The st_dep_single_bit detects if there is a single bit active in st_dep
+              st_dep_single_bit := (or ldu_buf(i).st_dep) and not (or (ldu_buf(i).st_dep and std_logic_vector(unsigned(ldu_buf(i).st_dep) - 1)));
+              if st_dep_single_bit = '1' then
+                ldu_buf(i).st_spec <= '0';
+              end if;
+
+              ldu_buf(i).st_dep(to_integer(unsigned(i_stu_issue_buf))) <= '0';
             end if;
           end loop;
         end if;
@@ -241,6 +263,10 @@ begin
         -- LOAD SHEDULE
         if commit = '1' then
           ldu_buf(to_integer(issue_ptr)).commited <= '1';
+
+          if ldu_buf(to_integer(issue_ptr)).st_dep /= std_logic_vector(to_unsigned(0, LDU_LEN-1)) then
+            ldu_buf(to_integer(issue_ptr)).st_spec <= '1';
+          end if;
         end if;
 
         -- LOAD RETIRE
@@ -251,14 +277,12 @@ begin
     end if;
   end process;
 
-
   g_flags:
   for i in 0 to LDU_SIZE-1 generate
     busy_flags(i) <= ldu_buf(i).busy;
     dispatch_flags(i) <= not ldu_buf(i).busy;
-    done_flags(i) <= ldu_buf(i).busy and ldu_buf(i).done;
     commit_flags(i) <= ldu_buf(i).busy and not (ldu_buf(i).commited or ldu_buf(i).done);
-    retire_flags(i) <= ldu_buf(i).busy and ldu_buf(i).done;
+    retire_flags(i) <= ldu_buf(i).busy and ldu_buf(i).done and not ldu_buf(i).st_spec;
     grp_cmp_flags(i) <= '1' when ldu_buf(i).grp = std_logic_vector(i_rd_grp) else '0';
     load_rdy(i) <= ldu_buf(i).busy and (not ldu_buf(i).commited) and (not ldu_buf(i).done) and grp_cmp_flags(i);
   end generate;
@@ -282,6 +306,7 @@ begin
   sched_wr_addr <= std_logic_vector(disp_ptr);
 
   commit_rdy <= or commit_flags;
+  retire_rdy <= or retire_flags;
 
   u_ldu_shed: entity hw.dispatcher(age_matrix)
   generic map (
@@ -303,22 +328,25 @@ begin
 
   issue_ptr <= unsigned(sched_rd_addr);
 
+
   ---
   -- OUTPUT
   ---
 
-  o_mem_wr_valid   <= commit;
-  o_mem_wr_addr    <= ldu_buf(to_integer(issue_ptr)).addr;
-  o_rd_grp_match   <= rd_grp_match;
-  o_mem_wr_qr      <= std_logic_vector(issue_ptr);
+  o_mem_req_valid   <= commit;
+  o_mem_req_addr    <= ldu_buf(to_integer(issue_ptr)).addr;
+  o_rd_grp_match    <= rd_grp_match;
+  o_mem_req_qr      <= std_logic_vector(issue_ptr);
 
   o_empty         <= empty;
   o_full          <= full;
 
-  o_cdbw_req      <= or done_flags;
+  o_cdbw_req      <= retire_rdy;
   o_cdbw_lh       <= ldu_lh;
   o_cdbw_vq       <= ldu_buf(to_integer(retire_ptr)).data;
   o_cdbw_tq       <= ldu_buf(to_integer(retire_ptr)).data_tag;
+
+  o_disp_qr <= std_logic_vector(disp_ptr);
 
 end architecture;
 

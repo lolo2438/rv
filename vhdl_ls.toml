@@ -31,6 +31,7 @@ files = [
 files = [
     "/home/laurent/Development/rv/hw/pkg/tb/*.vhd",
     "/home/laurent/Development/rv/hw/sim/tb/*_tb.vhd",
+    "/home/laurent/Development/rv/hw/sim/src/*.vhd",
 ]
 
 [libraries.hw]

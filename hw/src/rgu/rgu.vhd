@@ -39,6 +39,11 @@ entity rgu is
     o_data_tk     : out std_logic_vector(TAG_LEN-1 downto 0);
     o_data_rk     : out std_logic;
 
+    -- DEBUG I/F
+    o_reg_we      : out std_logic;
+    o_reg_addr    : out std_logic_vector(REG_LEN-1 downto 0);
+    o_reg_data    : out std_logic_vector(XLEN-1 downto 0);
+
     -- CDB RD I/F
     i_cdbr_vq     : in  std_logic_vector(XLEN-1 downto 0);
     i_cdbr_tq     : in  std_logic_vector(TAG_LEN-1 downto 0);
@@ -192,5 +197,9 @@ begin
   o_data_vk <= vk;
   o_data_tk <= tk;
   o_data_rk <= rk;
+
+  o_reg_we <= rob_commit;
+  o_reg_addr <= rob_rd;
+  o_reg_data <= rob_result;
 
 end architecture;

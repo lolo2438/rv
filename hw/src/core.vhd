@@ -44,6 +44,10 @@ entity core is
     --i_reg_wr_valid : in  std_logic;                            --! DEBUG: Data to write is valid,
     --o_reg_wr_ready : out std_logic;                            --! DEBUG: Ready signal is o_debug and o_halt
 
+    o_reg_we        : out std_logic;
+    o_reg_addr      : out std_logic_vector(REG_LEN-1 downto 0);
+    o_reg_data      : out std_logic_vector(XLEN-1 downto 0);
+
     -- IMEM I/F
     o_imem_addr     : out std_logic_vector(31 downto 0);        --! Address to read instruction from
     o_imem_avalid   : out std_logic;                            --! Address read is valid
@@ -290,6 +294,11 @@ begin
     i_disp_rs1    => disp_rs1,
     i_disp_rs2    => disp_rs2,
     i_disp_rd     => disp_rd,
+
+    o_reg_we      => o_reg_we,
+    o_reg_addr    => o_reg_addr,
+    o_reg_data    => o_reg_data,
+
     o_disp_tq     => rgu_tq,
     o_data_vj     => rgu_vj,
     o_data_tj     => rgu_tj,
@@ -301,6 +310,8 @@ begin
     i_cdbr_tq     => cdbr_tq,
     i_cdbr_rq     => cdbr_rq
   );
+
+
 
 
   -- FIXME: When SYS op is done, should not do anything

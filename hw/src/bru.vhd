@@ -46,43 +46,43 @@ entity bru is
   );
   port(
     -- CTRL I/F
-    i_clk  : std_logic;
-    i_srst : std_logic;
-    i_arst : std_logic;
+    i_clk           : in std_logic;
+    i_srst          : in std_logic;
+    i_arst          : in std_logic;
 
-    o_ras_empty : std_logic;
-    o_ras_full  : std_logic;
+    o_ras_empty     : out std_logic;
+    o_ras_full      : out std_logic;
 
-    o_bru_full  : std_logic;
-    o_bru_empty : std_logic;
+    o_bru_full      : out std_logic;
+    o_bru_empty     : out std_logic;
 
     -- DISPATCH I/F
-    i_disp_valid  : std_logic;
-    i_disp_op     : std_logic_vector(4 downto 0);
-    i_disp_f3     : std_logic_vector(2 downto 0);
-    i_disp_rs1    : std_logic_vector(REG_LEN-1 downto 0);
-    i_disp_rd     : std_logic_vector(REG_LEN-1 downto 0);
+    i_disp_valid    : in std_logic;
+    i_disp_op       : in std_logic_vector(4 downto 0);
+    i_disp_f3       : in std_logic_vector(2 downto 0);
+    i_disp_rs1      : in std_logic_vector(REG_LEN-1 downto 0);
+    i_disp_rd       : in std_logic_vector(REG_LEN-1 downto 0);
 
-    i_disp_rj : std_logic;
-    i_disp_vj : std_logic_vector(XLEN-1 downto 0);
-    i_disp_tj : std_logic_vector(TAG_LEN-1 downto 0);
+    i_disp_rj       : in std_logic;
+    i_disp_vj       : in std_logic_vector(XLEN-1 downto 0);
+    i_disp_tj       : in std_logic_vector(TAG_LEN-1 downto 0);
 
-    i_disp_rk : std_logic;
-    i_disp_vk : std_logic_vector(XLEN-1 downto 0);
-    i_disp_tk : std_logic_vector(TAG_LEN-1 downto 0);
+    i_disp_rk       : in std_logic;
+    i_disp_vk       : in std_logic_vector(XLEN-1 downto 0);
+    i_disp_tk       : in std_logic_vector(TAG_LEN-1 downto 0);
 
-    o_disp_tq : std_logic_vector(TAG_LEN-1 downto 0);
+    o_disp_tq       : out std_logic_vector(TAG_LEN-1 downto 0);
 
     --
-    i_next_pc    : std_logic;
-    o_branch     : std_logic;
-    o_spec       : std_logic;
-    o_pc         : std_logic_vector(XLEN-1 downto 0);
+    i_next_pc       : in std_logic;
+    o_branch        : out std_logic;
+    o_spec          : out std_logic;
+    o_pc            : out std_logic_vector(XLEN-1 downto 0);
 
     -- CDBR I/F
-    i_cdbr_rq : std_logic;
-    i_cdbr_vq : std_logic_vector(XLEN-1 downto 0);
-    i_cdbr_tq : std_logic_vector(TAG_LEN-1 downto 0);
+    i_cdbr_rq       : in std_logic;
+    i_cdbr_vq       : in std_logic_vector(XLEN-1 downto 0);
+    i_cdbr_tq       : in std_logic_vector(TAG_LEN-1 downto 0)
   );
 end entity;
 

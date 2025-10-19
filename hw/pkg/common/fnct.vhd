@@ -12,6 +12,12 @@ use work.cnst.all;
 
 package fnct is
 
+  --generic(
+  --  ENABLE_WARNINGS : boolean := false
+  --);
+  -- FIXME: For a generic, need to use the "is new pakcage clause"
+  constant ENABLE_WARNINGS : boolean := false;
+
   --! \param x The input to verify
   --! \return true when x is a temporary variable
   --!         false when x is a full signal
@@ -62,13 +68,6 @@ package fnct is
   --! \brief Reverses the vector : b"0100" -> b"0010"
   pure function bit_reverse(input : std_ulogic_vector) return std_ulogic_vector;
 
-
-  --! \param[in] file_name The file
-  --! \param[out] mem The memory to initialize
-  --! \brief Intializes the content of mem with the content of the hexadecimal file specified
-  --! \note The content of the file MUST be in hexadecimal and MUST match the size of the memory
-  --pure function init_mem_from_hex_file(file_name : in string) return std_logic_matrix;
-
 end package;
 
 
@@ -83,41 +82,6 @@ package body fnct is
 
   --  return true;
   --end function;
-
-  --pure function init_mem_from_hex_file(file_name : in string) return std_logic_matrix
-  --is
-  --  file f : text;
-  --  variable l : line;
-  --  variable status : file_open_status;
-  --  variable i : natural := 0;
-  --  variable mem : std_logic_matrix;
-  --begin
-  --  file_open(status, f, file_name, READ_MODE);
-  --  if status /= OPEN_OK then
-  --    report "Invalid file specified to initialize memory" severity note;
-  --    return;
-  --  end if;
-
-  --  while not endfile(f) loop
-  --    assert i < mem'length
-  --    report "Specified memory file " & file_name & " is greater than current memory size"
-  --    severity failure;
-
-  --    readline(f, l);
-
-  --    -- There should be 2 hexadecimal character per bytes
-  --    assert l'length * BYTE/2 = mem(i)'length
-  --    report "Invalid length of data specified to initialize memory in file " & file_name & " at line " & to_string(i)
-  --    severity failure;
-
-  --    hread(l, mem(i));
-  --    i := i + 1;
-  --  end loop;
-  --  file_close(f);
-
-  --  return mem;
-  --end function;
-
 
   pure function clog2 (x : positive) return natural is
   begin
@@ -146,9 +110,11 @@ package body fnct is
     severity failure;
 
     if is_x(input) then
-      assert NO_WARNING
-      report "COMMON.FNCT.ONE_HOT_ENCODER: metavalue detected, returning X"
-      severity warning;
+      if ENABLE_WARNINGS then
+        assert NO_WARNING
+        report "COMMON.FNCT.ONE_HOT_ENCODER: metavalue detected, returning X"
+        severity warning;
+      end if;
 
       return INVALID_RETURN;
     end if;
@@ -182,17 +148,21 @@ package body fnct is
     severity failure;
 
     if is_x(input) then
-      assert NO_WARNING
-      report "COMMON.FNCT.ONE_HOT_DECODER: metavalue detected, returning X"
-      severity warning;
+      if ENABLE_WARNINGS then
+        assert NO_WARNING
+        report "COMMON.FNCT.ONE_HOT_DECODER: metavalue detected, returning X"
+        severity warning;
+      end if;
 
       return INVALID_RETURN;
     end if;
 
     if not is_one_hot(input) then
-      assert NO_WARNING
-      report "COMMON.FNCT.ONE_HOT_DECODER: Input is not one hot"
-      severity warning;
+      if ENABLE_WARNINGS then
+        assert NO_WARNING
+        report "COMMON.FNCT.ONE_HOT_DECODER: Input is not one hot"
+        severity warning;
+      end if;
 
       return INVALID_RETURN;
     end if;
@@ -212,9 +182,11 @@ package body fnct is
     severity failure;
 
     if is_x(input) then
-      assert NO_WARNING
+      if ENABLE_WARNINGS then
+        assert NO_WARNING
         report "COMMON.FNCT.PRIORITY_ENCODER: metavalue detected, returning X"
         severity warning;
+      end if;
 
       return INVALID_RETURN;
     end if;
@@ -241,9 +213,11 @@ package body fnct is
       end loop;
     end if;
 
-    assert NO_WARNING
+    if ENABLE_WARNINGS then
+      assert NO_WARNING
       report "COMMON.FNCT.PRIORITY_ENCODER: no encoding found, returning X"
       severity warning;
+    end if;
 
     return INVALID_RETURN;
   end function;

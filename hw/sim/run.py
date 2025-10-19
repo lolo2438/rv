@@ -29,7 +29,9 @@ def _gen_vhdl_db(vu, output_file):
 
 vu = VUnit.from_argv(compile_builtins=False)
 vu.add_vhdl_builtins()
+vu.add_com()
 vu.add_osvvm()
+vu.add_verification_components()
 
 #vu.add_compile_option("ghdl.a_flags", ["--std=19"])
 
@@ -58,6 +60,6 @@ hw_lib.add_source_files("../src/flt/*.vhd")
 hw_lib.add_source_files("../src/*.vhd")
 
 #_gen_vhdl_db(vu, "vhdl_ls.toml")
-
+vu.set_sim_option("disable_ieee_warnings", True)
 vu.main()
 

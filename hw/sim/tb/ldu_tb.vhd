@@ -119,6 +119,7 @@ begin
 
         i_mem_resp_valid <= '0';
         wait until rising_edge(i_clk);
+        wait until rising_edge(i_clk);
         check(o_cdbw_req = '1', "Should send a request since we wrote data");
         check(o_cdbw_lh = '0', "Only one value is ready");
         check_equal(o_cdbw_vq, std_logic_vector'(x"1A2B3C4D"));

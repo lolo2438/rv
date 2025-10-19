@@ -264,7 +264,7 @@ begin
         if commit = '1' then
           ldu_buf(to_integer(issue_ptr)).commited <= '1';
 
-          if ldu_buf(to_integer(issue_ptr)).st_dep /= std_logic_vector(to_unsigned(0, LDU_LEN-1)) then
+          if ldu_buf(to_integer(issue_ptr)).st_dep /= std_logic_vector(to_unsigned(0, i_stu_dep'length)) then
             ldu_buf(to_integer(issue_ptr)).st_spec <= '1';
           end if;
         end if;
@@ -290,7 +290,7 @@ begin
 
   g_done_pairs:
   for i in 0 to LDU_SIZE-2 generate
-    ldu_done_pairs(i) <= ldu_buf(i).done and ldu_buf(i+1).done;
+    ldu_done_pairs(i) <= (ldu_buf(i).busy and ldu_buf(i).done) and (ldu_buf(i+1).busy and ldu_buf(i+1).done);
   end generate;
   ldu_lh <= or ldu_done_pairs;
 

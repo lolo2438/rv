@@ -5,6 +5,7 @@ use ieee.std_logic_textio.all;
 
 library vunit_lib;
 context vunit_lib.vunit_context;
+context vunit_lib.com_context;
 
 library common;
 use common.cnst.BYTE;
@@ -22,6 +23,9 @@ entity core_tb is
 end entity;
 
 architecture tb of core_tb is
+
+  constant RV_VIP_NAME : string := "RV_VIP";
+  constant RV_VIP_COM  : actor_t := find(RV_VIP_NAME);
 
   constant XLEN : natural := 32;
   constant REG_LEN : natural := 5;
@@ -92,8 +96,15 @@ architecture tb of core_tb is
   signal dmem_waddr         : std_logic_vector(DMEM_ADDR_WIDTH-1 downto 0);
   signal dmem_wdata         : std_logic_vector(DMEM_DATA_WIDTH-1 downto 0);
 
-
-
+  -- vip
+  signal rv_vip_reg_we      : std_logic;
+  signal rv_vip_reg_addr    : std_logic_vector(REG_LEN-1 downto 0);
+  signal rv_vip_reg_data    : std_logic_vector(XLEN-1 downto 0);
+  signal rv_vip_mem_we      : std_logic;
+  signal rv_vip_mem_addr    : std_logic_vector(XLEN-1 downto 0);
+  signal rv_vip_mem_data    : std_logic_vector(XLEN-1 downto 0);
+  signal rv_vip_en          : boolean := false;
+  signal rv_vip_done        : boolean;
 
   --procedure dmem_write_byte(addr : in std_logic_vector(DMEM_ADDRWIDTH-1 downto 0);
   --                          data : in std_logic_vector(7 downto 0);
@@ -146,7 +157,6 @@ architecture tb of core_tb is
 
   --procedure dmem_import_from_file;
   --procedure dmem_export_to_file;
-
 
 
 begin
@@ -238,15 +248,37 @@ begin
       core_en <= '0';
     end procedure;
 
+    variable msg : msg_t := new_msg;
+
+    variable imem_path_ptr : string_ptr_t;
+    variable dmem_path_ptr : string_ptr_t;
+
   begin
     test_runner_setup(runner, runner_cfg);
 
     while test_suite loop
+      rv_vip_en <= false;
+
       if run("basic_program") then
+        imem_path_ptr := new_string_ptr("code/basic_program.bin");
+        dmem_path_ptr := new_string_ptr("");
+        push_string_ptr_ref(msg, imem_path_ptr);
+        push_string_ptr_ref(msg, dmem_path_ptr);
+        send(net, RV_VIP_COM, msg);
+
+        rv_vip_en <= true;
+        if rv_vip_done = false then
+          wait until rv_vip_done = true or rv_vip_done'event;
+        end if;
+
         imem_load_program("code/basic_program.hex");
         run_program;
+
       elsif run("test2") then
       end if;
+
+      --deallocate(imem_path_ptr);
+      --deallocate(dmem_path_ptr);
     end loop;
 
     test_runner_cleanup(runner);
@@ -326,6 +358,12 @@ begin
     o_stall         => core_stalled,
     o_halt          => core_halted,
     o_debug         => core_debug,
+
+    -- debug ports
+    o_reg_we        => rv_vip_reg_we,
+    o_reg_addr      => rv_vip_reg_addr,
+    o_reg_data      => rv_vip_reg_data,
+
     o_imem_addr     => core_imem_addr,
     o_imem_avalid   => core_imem_avalid,
     i_imem_rdy      => core_imem_rdy,
@@ -342,6 +380,55 @@ begin
     o_dmem_waddr    => core_dmem_waddr,
     o_dmem_wdata    => core_dmem_wdata
   );
+
+  rv_vip_mem_we <= core_dmem_wvalid and core_dmem_wrdy;
+  p_vip_dmem_data:
+  process(core_dmem_we, core_dmem_wdata)
+  begin
+    rv_vip_mem_data <= (others => '0');
+    case core_dmem_we is
+      when "0001" =>
+        rv_vip_mem_data(7 downto 0) <= core_dmem_wdata(7 downto 0);
+      when "0010" =>
+        rv_vip_mem_data(7 downto 0) <= core_dmem_wdata(15 downto 8);
+      when "0100" =>
+        rv_vip_mem_data(7 downto 0) <= core_dmem_wdata(23 downto 16);
+      when "1000" =>
+        rv_vip_mem_data(7 downto 0) <= core_dmem_wdata(31 downto 24);
+      when "0011" =>
+        rv_vip_mem_data(15 downto 0) <= core_dmem_wdata(15 downto 0);
+      when "1100" =>
+        rv_vip_mem_data(15 downto 0) <= core_dmem_wdata(31 downto 16);
+      when others =>
+        rv_vip_mem_data <= core_dmem_wdata;
+    end case;
+  end process;
+
+  rv_vip_mem_addr <= core_dmem_waddr;
+
+  u_vip:
+  entity sim.rv_vip
+  generic map(
+    COM_RECEIVER_NAME   => RV_VIP_NAME,
+    RST_VAL             => RST_LEVEL,
+    REG_LEN             => REG_LEN,
+    DMEM_ADDR_WIDTH     => DMEM_ADDR_WIDTH,
+    IMEM_ADDR_WIDTH     => IMEM_ADDR_WIDTH,
+    XLEN                => XLEN
+  )
+  port map(
+    i_clk               => core_clk,
+    i_rst               => core_srst,
+    i_reg_we            => rv_vip_reg_we,
+    i_reg_addr          => rv_vip_reg_addr,
+    i_reg_data          => rv_vip_reg_data,
+    i_mem_we            => rv_vip_mem_we,
+    i_mem_addr          => rv_vip_mem_addr,
+    i_mem_data          => rv_vip_mem_data,
+    i_en                => rv_vip_en,
+    o_done              => rv_vip_done
+  );
+
 
 end architecture;
 
